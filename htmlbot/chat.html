@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Chatbot</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+<script>
+
+var secret = Math.random();
+var uid = null;
+var firstMessage = "/start"
+
+function post(payload, success, error) {
+    $.ajax({
+        url : document.location.href,
+        method : 'POST',
+        dataType : 'json',
+        contentType: 'application/json; charset=utf-8',
+        data : JSON.stringify(payload),
+        success : success?success:function() {},
+        error : error?error:function(xhr, errorText, errorThrown) { alert("Server error:\n" + errorText + " " + errorThrown?errorThrown:""); }
+    });
+}
+
+function init() {
+    $("#sendButton").click(sendText);
+    
+    var clear = $("#clear");
+    $('<div class="question">'+firstMessage+'</div>').insertBefore(clear);
+      
+    post({"init":secret, "text": firstMessage}, function( data ) {
+      uid = data.uid;
+      // TODO save uid and secret in localStorage and next time offer/try to continue the session
+
+      for(let i in data.replies) {
+        printReply(data.replies[i]);
+      }
+      
+    }, function (xhr, errorText, errorThrown) {
+        alert("Failed to exchange secrets with the server:\n" + errorText);
+    });
+    
+    
+    window.setInterval(checkForMessages, 3000);
+}
+
+function checkForMessages() {
+    var payload = {"uid" :uid, "secret":secret};
+    post(payload, function( data ) {
+      for(let i in data.replies) {
+        printReply(data.replies[i]);
+      }
+      if(data.replies.length > 0) {
+        // Notify for last first message
+        notify(data.replies[0].text);
+      }
+    });
+}
+
+function buttonClick() {
+    var payload = $( this ).data("payload");
+    var text = this.firstChild.data;
+    $('<div class="question">'+text+'</div>').insertBefore($("#clear"));
+    $( this ).parent().remove();
+    sendText(null, payload, true);
+}
+
+function printReply(reply) {
+  
+  function prettify(html) {
+    let orghtml = html;
+    // Replace commands with links
+    html = html.replace(/(^|\s)(\/\w+)(\b)/gm, '$1<span class="command" onclick="$(\'#text\').val(this.innerText); sendText()">$2</span>$3')
+    // Replace newlines
+    html = html.replace(/\n/gm, "<br>\n");
+    // Replace urls with links
+    html = html.replace(/((https?:\/\/)?(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-z]{2,6}\b([-a-zA-Z0-9@:%_\+.~#?&\/\/=]*))/gm, function(m0,m1,m2) { if(!m2) { m0 = "http://" + m0 } return '<a href="' + m0 + '">' + m1 + '</a>'; });
+    
+    if(orghtml != html) {
+      return html;
+    }
+    return true; // No changes
+  }
+  
+  
+  
+  var r = $('<div class="reply">'+reply.text+'</div>').insertBefore(clear);
+  
+
+  var n;
+  var walk = document.createTreeWalker(r[0], NodeFilter.SHOW_TEXT, null, false);
+  while(n = walk.nextNode()) {
+    
+    var ret = prettify(n.data)
+    if(ret !== true) {
+      // Changed, so replace node
+      $(n).replaceWith(ret);
+    }
+    
+  }
+  
+  
+  
+  
+  if(reply.buttons) {
+    var buttonContainer = $('<div>').appendTo(r);
+    for(let i in reply.buttons) {
+      var title = reply.buttons[i][0];
+      var payload = reply.buttons[i][1];
+      var button = $('<button data-payload="'+payload+'">' + title + '</button>').appendTo(buttonContainer);
+      button.click(buttonClick);
+    }
+  }
+  
+  $("html, body").animate({
+      scrollTop: $(r).offset().top
+  }, 700);
+  
+}
+
+function sendText(ev, text, quick_reply) {
+    
+    var textarea = false;
+    if(!text) {
+        textarea = $("#text");
+        text = textarea.val();
+    }
+    
+    var payload = {"uid" :uid, "secret":secret, "text": text};
+    
+    if(quick_reply) {
+        payload["quick_reply"] = true;
+    }
+    
+    var clear = $("#clear");
+    
+    if(text) {
+        if(textarea) {
+           $('<div class="question">'+text+'</div>').insertBefore(clear);
+        }
+        post(payload, function( data ) {
+          for(let i in data.replies) {
+            printReply(data.replies[i]);
+          }
+        });
+        
+        if(textarea) {
+            textarea.val("");
+        }
+    }
+    
+}
+
+
+
+function notify(text) {
+  // https://developer.mozilla.org/en-US/docs/Web/API/notification
+  
+  // Let's check if the browser supports notifications
+  if (!("Notification" in window)) {
+    alert(text);
+    return;
+  }
+
+  // Let's check whether notification permissions have already been granted
+  else if (Notification.permission === "granted") {
+    // If it's okay let's create a notification
+    var notification = new Notification(text);
+  }
+
+  // Otherwise, we need to ask the user for permission
+  else if (Notification.permission !== "denied") {
+    Notification.requestPermission(function (permission) {
+      // If the user accepts, let's create a notification
+      if (permission === "granted") {
+        var notification = new Notification(text);
+      }
+    });
+  }
+
+  // At last, if the user has denied notifications, and you 
+  // want to be respectful there is no need to bother them any more.
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+$( init );
+
+</script>
+<style>
+body {
+  font-family:sans-serif;
+  font-size:1.5em;
+}
+#chat {
+    border:2px solid gray;
+    margin:1px;
+    padding:2px;
+    background:#eeffee;
+}
+#chat .question {
+    background:#ccffff;
+    border-radius:3px;
+    padding:2px;
+    float:right;
+    clear:both;
+}
+#chat .reply {
+    background:#ffffff;
+    border-radius:3px;
+    padding:2px;
+    float:left;
+    clear:both;
+}
+#chat .reply .command {
+    color:blue;
+    cursor:pointer;
+}
+
+#clear {
+    clear:both;
+}
+</style>
+</head>
+<body>
+<div id="chat">
+<br id="clear">
+<textarea id="text"></textarea><button id="sendButton">Send</button>
+</div>
+
+</body>
+</html>
