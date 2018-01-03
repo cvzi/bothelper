@@ -1,6 +1,28 @@
 # bothelper
 Small library for kik, Telegram and Facebook Messenger bots
 
+Features:
+---------
+Supported are Kik, Telegram and Facebook messenger and a chat function on a HTML site (primarily for testing).  
+The bots are running on a flask server. The Telegram bot also supports the message loop version without server.  
+
+Currently it can only handle incoming text messages (and locations for Telegram and Facebook) and sending text messages.
+
+Other functions:  
+
+`bothelper.Bot.sendText(msg, text)`  
+Send a text message.
+
+`bothelper.Bot.sendPhoto(msg, url)`  
+Send a photo via its url.
+
+`bothelper.Bot.sendQuestion(msg, text, responses, onOtherResponse)`  
+Send a text message with predifined reply buttons (a.k.a "quick reply", "InlineKeyboardButton"). 
+
+`bothelper.Bot.user(msg)`  
+Store and retrieve data specific to one user, similiar to sessions in PHP.  
+
+
 
 Examples:
 ---------
@@ -73,4 +95,11 @@ if __name__ == '__main__':
 
 ```
 
+Requirements
+------------
+ * [Flask](https://pypi.python.org/pypi/Flask)
+ * [emoji](https://pypi.python.org/pypi/emoji/0.4.5)
+ * [flag](https://github.com/cvzi/flag)
+ * [telepot](https://pypi.python.org/pypi/telepot) (only if you want to use the Telegram bot)
+ * [kik](https://pypi.python.org/pypi/kik) (only if you want to use the Kik bot)
 
