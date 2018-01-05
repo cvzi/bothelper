@@ -102,7 +102,39 @@ class ServerHelper:
         
         
     def _sendText(self, msg, text, buttons=None):
-    
+        
+        # Check length of message
+        if "maxMessageLength" in msg["_bot"].specifications and len(text) > msg["_bot"].specifications["maxMessageLength"]:
+            N = msg["_bot"].specifications["maxMessageLength"]
+            
+            re_newline = re.compile(r"\n|$", flags=re.MULTILINE)
+            re_whitespace = re.compile("\s+", flags=re.MULTILINE)
+            re_wordend = re.compile("\b\s*", flags=re.MULTILINE)
+            
+            # Split long message up
+            while len(text) > N:
+                # Try to split at newline
+                m = re_newline.search(text, pos=N-50)
+                if not m: # try to split at whitespace
+                    m = re_whitespace.search(text, pos=N-50)
+                    if not m: # try to split at wordend
+                        m = re_wordend.search(text, pos=N-50)
+                    
+                if not m or m.end() == len(text):
+                    # split anywhere
+                    text, rest = text[0:N-5] + "...", "..." + text[N-5:].strip()
+                else:
+                    # split at match
+                    text, rest = text[0:m.start()], text[m.end():].strip()
+                
+                if len(rest) == 0:
+                    text = rest
+                    break
+                else:
+                    msg["_bot"].sendText(msg, text)
+                
+                text = rest
+        
         return msg["_bot"].sendText(msg, text, buttons)
             
     def _sendPhoto(self, msg, url, buttons=None):

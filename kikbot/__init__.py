@@ -4,9 +4,21 @@ import flask
 import kik
 import kik.messages
 
+import threading
+import time
+
 
 class KikBot:
-  
+
+
+    specifications = {
+        "maxMessageLength" : 1000, # TODO Just a guess. What's the real limit? 
+        "maxMessagesPerUser" : 5, # https://dev.kik.com/#/docs/messaging#sending-messages
+        "maxMessagesPerBatch" : 25 # https://dev.kik.com/#/docs/messaging#rate-limits
+        }
+        
+        
+        
     def __init__(self, serv, flaskserver, route, name, apikey, webhook_host):
         """
         It is suggested to use a secret :param route: to ensure that nobody can send malicious requests.
@@ -49,9 +61,45 @@ class KikBot:
 
         return "Ok", 200
         
-    def __sendMessages(self, response_messages):
+    def __sendMessages(self, response_messages, wait=0):
+        if wait:
+            time.sleep(wait)
+    
         if response_messages:
-            self.kik_api.send_messages(response_messages)
+            if len(response_messages) > self.specifications["maxMessagesPerUser"]:
+                remaining = response_messages
+                while len(remaining) > 0:
+                    # Respect limits: https://dev.kik.com/#/docs/messaging#sending-messages and https://dev.kik.com/#/docs/messaging#rate-limits
+                    current_batch = [] # Collect messages to send now, respecting both limits
+                    next_batch = [] # These messages should be sent in next batch, before the remaining message
+                    to_users = {} # Count messages per user in batch
+                    i = 0 # Count total messages in batch
+                    N = self.specifications["maxMessagesPerBatch"] # Max messages per Batch
+                    for message in remaining[0:N]:
+                        if not message.to in to_users:
+                            to_users[message.to] = 0
+                        
+                        if to_users[message.to] < self.specifications["maxMessagesPerUser"] and i < N:
+                            # Ok
+                            current_batch.append(message)
+                        elif i < N:
+                            # user has enough messages in this batch
+                            next_batch.append(message)
+                        else:
+                            # batch is full with messages. 
+                            next_batch.append(message)
+                        
+                        to_users[message.to] += 1
+                        i += 1
+                    
+                    if current_batch:
+                        self.kik_api.send_messages(current_batch)
+                        time.sleep(3)
+                    
+                    remaining = next_batch + remaining[N:]
+            
+            else:
+                self.kik_api.send_messages(response_messages)
         
     def __handleMessage(self, message):
         message["_bot"] = self
@@ -84,6 +132,17 @@ class KikBot:
             raise Exception("Unkown type in message: type=%s" % str(message["type"]))
          
         message["_responseSent"] = True
+        
+        if len(message["_responseMessages"]) > self.specifications["maxMessagesPerUser"]:
+            
+            batch, remaining = message["_responseMessages"][0 : self.specifications["maxMessagesPerUser"] ] , message["_responseMessages"][self.specifications["maxMessagesPerUser"] : ]
+            
+            t = threading.Thread(target=self.kik_api.send_messages, args=(remaining, 5))
+            t.daemon = True
+            t.start()
+            
+            return batch
+        
         return message["_responseMessages"]
             
     def sendText(self, msg, text, buttons=None):
@@ -105,7 +164,7 @@ class KikBot:
         )
         
         if msg["_responseSent"]:
-            # The original message was already sent back, so we need send the reply seperately
+            # The original message was already sent back, so we need to send the reply seperately
             self.__sendMessages(msg["_responseMessages"])
         
      

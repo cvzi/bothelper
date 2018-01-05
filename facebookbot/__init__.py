@@ -16,6 +16,12 @@ class FacebookBot:
     Based on `https://github.com/hartleybrody/fb-messenger-bot/blob/master/app.py`_
     """
   
+  
+    specifications = {
+        "maxMessageLength" : 2000
+        }
+
+  
     def __init__(self, serv, flaskserver, route, app_secret, verify_token, access_token, start_message=None):
         """
         It is suggested to use a secret :param route: to ensure that nobody can send malicious 
@@ -120,7 +126,7 @@ class FacebookBot:
                         
                         
 
-        return "Ok", 200    
+        return "Ok", 200
 
 
  
@@ -149,6 +155,7 @@ class FacebookBot:
 
     def __sendMessage(self, recipient_id, message, buttons):
         data = {
+            "messaging_type" : "RESPONSE",
             "recipient": {
                 "id": recipient_id
             },
@@ -167,7 +174,7 @@ class FacebookBot:
                 
                 quick_replies.append({
                     "content_type" : "text",
-                    "title" : title,
+                    "title" : title[0:20],
                     "payload" : button[1] if isinstance(button[1], str) else button[0]
                   })
             data["message"]["quick_replies"] = quick_replies
@@ -176,9 +183,10 @@ class FacebookBot:
         
         ret = json.loads(r.text)
         
-        assert "error" not in ret
-
+        if "error" in ret:
+            print("Could not send message:\n%s" % (r.text.encode('unicode-escape').decode('ascii')))
         
+    
     def sendText(self, msg, text, buttons=None):
         
         return self.__sendMessage(msg["_userId"], {

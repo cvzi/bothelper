@@ -15,6 +15,13 @@ class TelegramBot:
     `http://telepot.readthedocs.io/en/latest/reference.html#message-loop-and-webhook`_
     """
     
+    
+    specifications = {
+        "maxMessageLength" : 4096
+        }
+    
+    
+    
     DISABLEDBUTTON = "<DISABLEDBUTTON>"
     
     def __init__(self, serv, flaskserver, route, token, webhook_host):
@@ -33,6 +40,8 @@ class TelegramBot:
         self.__route = route
         
         self._init(serv, token)
+        
+        
    
     def _init(self, serv, token):
         self.serv = serv
@@ -97,7 +106,7 @@ class TelegramBot:
             
         return self.telepotBot.answerCallbackQuery(query_id)
             
-    def sendText(self, msg, text, buttons):
+    def sendText(self, msg, text, buttons=None):
     
         return_id = int(msg["_userId"][3:])
         
@@ -110,7 +119,7 @@ class TelegramBot:
         
         self.telepotBot.sendMessage(return_id, self.serv._emojize(text), reply_markup=reply_markup)
 
-    def sendPhoto(self, msg, url, buttons):
+    def sendPhoto(self, msg, url, buttons=None):
     
         return_id = int(msg["_userId"][3:])
         

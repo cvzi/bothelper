@@ -8,7 +8,10 @@ import flask
 
 class HtmlBot:
 
-  
+    specifications = {
+        "maxMessageLength" : 10000
+        }
+        
     def __init__(self, serv, flaskserver, route):
     
         self.serv = serv
