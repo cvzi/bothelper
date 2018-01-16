@@ -93,10 +93,14 @@ class KikBot:
                         i += 1
                     
                     if current_batch:
+                        # Send batch
                         self.kik_api.send_messages(current_batch)
-                        time.sleep(3)
                     
                     remaining = next_batch + remaining[N:]
+                    
+                    if current_batch and remaining:
+                        # Wait before sending the next batch
+                        time.sleep(3)
             
             else:
                 self.kik_api.send_messages(response_messages)
