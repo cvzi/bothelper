@@ -14,7 +14,8 @@ class KikBot:
     specifications = {
         "maxMessageLength" : 1000, # TODO Just a guess. What's the real limit? 
         "maxMessagesPerUser" : 5, # https://dev.kik.com/#/docs/messaging#sending-messages
-        "maxMessagesPerBatch" : 25 # https://dev.kik.com/#/docs/messaging#rate-limits
+        "maxMessagesPerBatch" : 25, # https://dev.kik.com/#/docs/messaging#rate-limits
+        "waitBetweenBatches" : 2
         }
         
         
@@ -100,7 +101,7 @@ class KikBot:
                     
                     if current_batch and remaining:
                         # Wait before sending the next batch
-                        time.sleep(3)
+                        time.sleep(specifications["waitBetweenBatches"])
             
             else:
                 self.kik_api.send_messages(response_messages)
