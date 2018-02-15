@@ -13,6 +13,9 @@ Other functions:
 `bothelper.Bot.sendText(msg, text)`  
 Send a text message. Supports [emojis by ascii name](https://github.com/carpedm20/emoji#example) and respects the messaging limits of the platforms.
 
+`bothelper.Bot.sendLink(msg, url)`  
+Send a link. 
+
 `bothelper.Bot.sendPhoto(msg, url)`  
 Send a photo via its url.
 
