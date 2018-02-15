@@ -38,7 +38,11 @@ class VagueReply:
             self.lastMatch = None
 
         def match(self, s):
-            self.lastMatch = self.regex.match(s).group(0)
+            m = self.regex.match(s)
+            if not m:
+                self.lastMatch = None
+                return None
+            self.lastMatch = m.group(0)
             return self.lastMatch
         
         def __eq__(self, s):
@@ -137,6 +141,9 @@ class ServerHelper:
         
         return msg["_bot"].sendText(msg, text, buttons)
             
+    def _sendLink(self, msg, url, buttons=None):
+        return msg["_bot"].sendLink(msg, url, buttons)
+            
     def _sendPhoto(self, msg, url, buttons=None):
     
         return msg["_bot"].sendPhoto(msg, url, buttons)
@@ -144,6 +151,9 @@ class ServerHelper:
 
     def _handleTextMessage(self, msg):
         user = self.bot.user(msg)
+        
+        from pprint import pprint
+        pprint(msg)
         
         msg["text_nice"] = self._demojize(msg["text"].strip())
         msg["text_nice_lower"] = msg["text_nice"].lower()
@@ -379,10 +389,17 @@ class Bot:
             msg = msg.msg()
         return self.serv._sendText(msg, text, buttons)
         
+    def sendLink(self, msg, url, buttons=None):
+        if isinstance(msg, User):
+            msg = msg.msg()
+        return self.serv._sendLink(msg, url, buttons)
+        
+        
     def sendPhoto(self, msg, url, buttons=None):
         if isinstance(msg, User):
             msg = msg.msg()
         return self.serv._sendPhoto(msg, url, buttons)
+        
         
     def sendQuestion(self, msg, text, responses=None, onOtherResponse=None, onOtherResponseReturn=None):
         if isinstance(msg, User):

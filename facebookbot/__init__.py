@@ -192,7 +192,40 @@ class FacebookBot:
         return self.__sendMessage(msg["_userId"], {
             "text" : self.serv._emojize(text)
         }, buttons)
+    
+    def sendLink(self, msg, url, buttons=None):
+        try:
+            domain = url.split("//" , 1)[1]
+            if domain.startswith("www."):
+                domain = domain[4:]
+            if "/" in domain:
+                domain = domain.split("/", 1)[0]
+             
+            domain = domain[0:15]
+            button_text = "Open %s" % domain
+        except:
+            button_text = "Open website"
+        
+        # Ref.: https://developers.facebook.com/docs/messenger-platform/reference/buttons/url
+        return self.__sendMessage(msg["_userId"], {
+            "attachment" : {
+                "type" : "template",
+                "payload" : {   
+                    "template_type": "button",
+                    "text": url,
+                    "buttons": [
+                      {
+                        "type":"web_url",
+                        "url": url,
+                        "title": button_text, # Button title. 20 character limit.
+                        "messenger_extensions": "false"
+                      }
+                    ]
+                }
+            }
+        }, buttons)
 
+    
     def sendPhoto(self, msg, url, buttons=None):
         
         return self.__sendMessage(msg["_userId"], {

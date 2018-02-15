@@ -144,3 +144,18 @@ class HtmlBot:
             "buttons" : b
             }
         )
+        
+    def sendLink(self, msg, url, buttons=None):
+        b = None
+        if buttons:
+            b = [(button[0], button[1] if isinstance(button[1], str) else button[0]) for button in buttons]
+            
+    
+        msg["_responseMessages"].append({
+            "to" : msg["_userId"],
+            "text" : '<a href="'+url+'">'+url.split("://", 1)[1]+'</a>',
+            "buttons" : b
+            }
+        )
+        
+        

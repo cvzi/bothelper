@@ -118,7 +118,21 @@ class TelegramBot:
             reply_markup = telepot.namedtuple.InlineKeyboardMarkup(inline_keyboard=[inlineKeyboardButtons])
         
         self.telepotBot.sendMessage(return_id, self.serv._emojize(text), reply_markup=reply_markup)
+        
+    def sendLink(self, msg, url, buttons=None):
+        # Telegram supports no special way of sending links, so just send the raw URL as text
+        return_id = int(msg["_userId"][3:])
+        
+        reply_markup = None
+        if buttons is not None:
+            inlineKeyboardButtons = []
+            for button in buttons:
+                inlineKeyboardButtons.append(telepot.namedtuple.InlineKeyboardButton(text=self.serv._emojize(button[0]), callback_data=button[1] if isinstance(button[1], str) else button[0]))
+            reply_markup = telepot.namedtuple.InlineKeyboardMarkup(inline_keyboard=[inlineKeyboardButtons])
+        
+        self.telepotBot.sendMessage(return_id, url, reply_markup=reply_markup, disable_web_page_preview=False)
 
+        
     def sendPhoto(self, msg, url, buttons=None):
     
         return_id = int(msg["_userId"][3:])
