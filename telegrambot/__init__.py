@@ -17,7 +17,8 @@ class TelegramBot:
     
     
     specifications = {
-        "maxMessageLength" : 4096
+        "maxMessageLength" : 4096,
+        "truncateInlineButtonTitle" : 40 # Chararacters. This is a guess, there's nothing in the official documentation
         }
     
     
@@ -106,16 +107,41 @@ class TelegramBot:
             
         return self.telepotBot.answerCallbackQuery(query_id)
             
+            
+    def _reply_markup(self, buttons):
+        if not buttons:
+            return None
+            
+        inlineKeyboardButtons = []
+        charsInRow = 0
+        currentRow = []
+        for button in buttons:
+            inlineKeyboardButton = telepot.namedtuple.InlineKeyboardButton(text=self.serv._emojize(button[0]), callback_data=button[1] if isinstance(button[1], str) else button[0])
+            
+            if charsInRow + len(button[0]) < self.specifications["truncateInlineButtonTitle"]:
+                # Append button to current row
+                currentRow.append(inlineKeyboardButton)
+                charsInRow += len(button[0])
+            else:
+                # Create a new row
+                if currentRow:
+                    inlineKeyboardButtons.append(currentRow)
+                    currentRow = [inlineKeyboardButton]
+                    charsInRow = len(button[0])
+        
+        # Last row
+        if currentRow:
+            inlineKeyboardButtons.append(currentRow)
+        
+        reply_markup = telepot.namedtuple.InlineKeyboardMarkup(inline_keyboard=inlineKeyboardButtons)
+        return reply_markup
+        
+            
     def sendText(self, msg, text, buttons=None):
     
         return_id = int(msg["_userId"][3:])
         
-        reply_markup = None
-        if buttons is not None:
-            inlineKeyboardButtons = []
-            for button in buttons:
-                inlineKeyboardButtons.append(telepot.namedtuple.InlineKeyboardButton(text=self.serv._emojize(button[0]), callback_data=button[1] if isinstance(button[1], str) else button[0]))
-            reply_markup = telepot.namedtuple.InlineKeyboardMarkup(inline_keyboard=[inlineKeyboardButtons])
+        reply_markup = self._reply_markup(buttons)
         
         self.telepotBot.sendMessage(return_id, self.serv._emojize(text), reply_markup=reply_markup)
         
@@ -123,12 +149,7 @@ class TelegramBot:
         # Telegram supports no special way of sending links, so just send the raw URL as text
         return_id = int(msg["_userId"][3:])
         
-        reply_markup = None
-        if buttons is not None:
-            inlineKeyboardButtons = []
-            for button in buttons:
-                inlineKeyboardButtons.append(telepot.namedtuple.InlineKeyboardButton(text=self.serv._emojize(button[0]), callback_data=button[1] if isinstance(button[1], str) else button[0]))
-            reply_markup = telepot.namedtuple.InlineKeyboardMarkup(inline_keyboard=[inlineKeyboardButtons])
+        reply_markup = self._reply_markup(buttons)
         
         self.telepotBot.sendMessage(return_id, url, reply_markup=reply_markup, disable_web_page_preview=False)
 
@@ -137,12 +158,7 @@ class TelegramBot:
     
         return_id = int(msg["_userId"][3:])
         
-        reply_markup = None
-        if buttons is not None:
-            inlineKeyboardButtons = []
-            for button in buttons:
-                inlineKeyboardButtons.append(telepot.namedtuple.InlineKeyboardButton(text=self.serv._emojize(button[0]), callback_data=button[1] if isinstance(button[1], str) else button[0]))
-            reply_markup = telepot.namedtuple.InlineKeyboardMarkup(inline_keyboard=[inlineKeyboardButtons])
+        reply_markup = self._reply_markup(buttons)
         
         self.telepotBot.sendPhoto(return_id, url, reply_markup=reply_markup)
 
