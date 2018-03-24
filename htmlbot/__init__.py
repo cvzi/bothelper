@@ -1,6 +1,7 @@
 import json
 import random
 import os
+import html
 
 # pip
 import flask
@@ -115,10 +116,20 @@ class HtmlBot:
             self.replies_queue[uid].append(reply)
         
         
-    def sendText(self, msg, text, buttons=None):
+    def __formatButtons(self, buttons):
+        def formatButton(button):
+            if isinstance(button[1], str):
+                return html.escape(self.serv._emojize(button[0])), button[1]
+            else:
+                return html.escape(self.serv._emojize(button[0])), button[0]
+    
         b = None
         if buttons:
-            b = [(button[0], button[1] if isinstance(button[1], str) else button[0]) for button in buttons]
+            b = [formatButton(button) for button in buttons]
+        return b
+        
+    def sendText(self, msg, text, buttons=None):
+        b = self.__formatButtons(buttons)
             
     
         if msg["_responseSent"]:
@@ -127,7 +138,7 @@ class HtmlBot:
         else:
             msg["_responseMessages"].append({
                 "to" : msg["_userId"],
-                "text" : self.serv._emojize(text),
+                "text" : html.escape(self.serv._emojize(text)),
                 "buttons" : b
                 }
             )
@@ -140,7 +151,7 @@ class HtmlBot:
     
         msg["_responseMessages"].append({
             "to" : msg["_userId"],
-            "text" : '<img src="'+url+'">',
+            "html" : '<img src="'+html.escape(url)+'">',
             "buttons" : b
             }
         )
@@ -153,7 +164,7 @@ class HtmlBot:
     
         msg["_responseMessages"].append({
             "to" : msg["_userId"],
-            "text" : '<a href="'+url+'">'+url.split("://", 1)[1]+'</a>',
+            "html" : '<a href="'+html.escape(url)+'">'+html.escape(url.split("://", 1)[1])+'</a>',
             "buttons" : b
             }
         )

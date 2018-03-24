@@ -72,10 +72,15 @@ class VagueReply:
         self.data = []
         
         
-    def new(self, definitive, vagues):
+    def new(self, definitive, vagues=None):
+    
+        if not vagues:
+            vagues = definitive
+            definitive = definitive[0]
     
         c = VagueReply.VagueContainer(definitive, vagues)
         self.data.append(c)
+        
 
         return c
 
@@ -152,8 +157,6 @@ class ServerHelper:
     def _handleTextMessage(self, msg):
         user = self.bot.user(msg)
         
-        from pprint import pprint
-        pprint(msg)
         
         msg["text_nice"] = self._demojize(msg["text"].strip())
         msg["text_nice_lower"] = msg["text_nice"].lower()
@@ -205,7 +208,6 @@ class ServerHelper:
     def _handleButtonClick(self, msg):
         user = self.bot.user(msg)
         
-        print(msg)
         
         button = user.getButton(msg["text"])
         
@@ -277,7 +279,7 @@ class ServerHelper:
         
         return register_command
         
-    def textRegexMatch(self, rawpattern, flags=None):
+    def textRegexMatch(self, rawpattern, flags=re.IGNORECASE):
         regex_pattern = re.compile(rawpattern, flags)
         
         def __condition(self, msg):
@@ -321,12 +323,18 @@ class Bot:
         
         self.users = {}
         self.userFile = userFile
+        self.userStorage = None
         
         if self.userFile is not None and os.path.isfile(self.userFile):
         
             with open(self.userFile, "rb") as fs:
             
                 self.users = pickle.load(fs)
+                
+                
+    def addPermanentStorage(self, storage):
+        self.userStorage = storage
+        
         
     def getFlask(self):
         if self.__flaskServer is None:
@@ -372,7 +380,7 @@ class Bot:
     def user(self, msg):
         userId = msg["_userId"]
         if not userId in self.users:
-            self.users[userId] = User(userId=userId, lastMsg=msg)
+            self.users[userId] = User(userId=userId, lastMsg=msg, storage=self.userStorage)
         
         self.users[userId].msg(msg)
         return self.users[userId]
@@ -430,11 +438,14 @@ class Bot:
 
 class User:
 
-    def __init__(self, userId, lastMsg=None):
+    def __init__(self, userId, lastMsg=None, storage=None):
         self.__lastMsg = lastMsg
         self.userId = userId
+        self.storage = storage
         self.data = {}
         self.userdata = {}
+        if self.storage is not None:
+            self.userdata = self.storage.retrieve(userId)
         self.conversation = None
         self.onOtherResponseNAME = "__onOtherResponse__123"
         
@@ -464,6 +475,8 @@ class User:
         
     def storeValue(self, key, value):
         self.userdata[key] = value
+        if self.storage is not None:
+            self.storage.store(self.userId, key, value)
         
     def retrieveValue(self, key, default=None):
         if key in self.userdata:
@@ -539,9 +552,11 @@ class User:
                         vagueContainers = button[2]
                         
                     for vagueContainer in vagueContainers:
-                        m = vagueContainer.match(query)
-                        if m is not None:
-                            return button[1], vagueContainer.definitve, m
+                        if isinstance(vagueContainer, VagueReply.VagueContainer):
+                            m = vagueContainer.match(query)
+                            if m is not None:
+                                return button[1], vagueContainer.definitve, m
+
             return None
             
         

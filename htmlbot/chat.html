@@ -25,6 +25,8 @@ function post(payload, success, error) {
 
 function init() {
     $("#sendButton").click(sendText);
+    $("#text").keyup(textOnKeyUp);
+
     
     var clear = $("#clear");
     $('<div class="question">'+firstMessage+'</div>').insertBefore(clear);
@@ -43,6 +45,7 @@ function init() {
     
     
     window.setInterval(checkForMessages, 3000);
+    
 }
 
 function checkForMessages() {
@@ -70,6 +73,7 @@ function printReply(reply) {
   
   function prettify(html) {
     let orghtml = html;
+    
     // Replace commands with links
     html = html.replace(/(^|\s)(\/\w+)(\b)/gm, '$1<span class="command" onclick="$(\'#text\').val(this.innerText); sendText()">$2</span>$3')
     // Replace newlines
@@ -83,32 +87,34 @@ function printReply(reply) {
     return true; // No changes
   }
   
-  
-  
-  var r = $('<div class="reply">'+reply.text+'</div>').insertBefore(clear);
-  
+  var r;
+  if("html" in reply) {
+      r = $('<div class="reply">'+reply.html+'</div>').insertBefore(clear);
+  } else {
+      r = $('<div class="reply">'+reply.text+'</div>').insertBefore(clear);
+      
 
-  var n;
-  var walk = document.createTreeWalker(r[0], NodeFilter.SHOW_TEXT, null, false);
-  while(n = walk.nextNode()) {
-    
-    var ret = prettify(n.data)
-    if(ret !== true) {
-      // Changed, so replace node
-      $(n).replaceWith(ret);
-    }
-    
+      var n;
+      var walk = document.createTreeWalker(r[0], NodeFilter.SHOW_TEXT, null, false);
+      while(n = walk.nextNode()) {
+        
+        var ret = prettify(n.data)
+        if(ret !== true) {
+          // Changed, so replace node
+          $(n).replaceWith(ret);
+        }
+        
+      }
   }
-  
-  
-  
   
   if(reply.buttons) {
     var buttonContainer = $('<div>').appendTo(r);
     for(let i in reply.buttons) {
       var title = reply.buttons[i][0];
       var payload = reply.buttons[i][1];
-      var button = $('<button data-payload="'+payload+'">' + title + '</button>').appendTo(buttonContainer);
+      var button = $('<button>' + title + '</button>').appendTo(buttonContainer);
+      button.data("payload", payload);
+      button.attr("title", payload);
       button.click(buttonClick);
     }
   }
@@ -151,6 +157,13 @@ function sendText(ev, text, quick_reply) {
     }
     
 }
+
+function textOnKeyUp(e) {
+    if(e.shiftKey == false && (e.keyCode || e.which) == 13) { // Enter
+        sendText();
+    }
+}
+
 
 
 
@@ -211,15 +224,19 @@ body {
 }
 #chat .question {
     background:#ccffff;
+    border: 1px solid #18aae4;
     border-radius:3px;
-    padding:2px;
+    padding:1px;
+    margin:1px;
     float:right;
     clear:both;
 }
 #chat .reply {
     background:#ffffff;
+    border:1px solid #97d297;
     border-radius:3px;
-    padding:2px;
+    padding:1px;
+    margin:1px;
     float:left;
     clear:both;
 }
@@ -236,7 +253,7 @@ body {
 <body>
 <div id="chat">
 <br id="clear">
-<textarea id="text"></textarea><button id="sendButton">Send</button>
+<textarea autofocus id="text" style="width:50%;"></textarea><button id="sendButton">Send</button>
 </div>
 
 </body>

@@ -125,9 +125,10 @@ class TelegramBot:
             else:
                 # Create a new row
                 if currentRow:
-                    inlineKeyboardButtons.append(currentRow)
-                    currentRow = [inlineKeyboardButton]
-                    charsInRow = len(button[0])
+                    inlineKeyboardButtons.append(currentRow) # Append old (full) row
+                currentRow = [inlineKeyboardButton]
+                charsInRow = len(button[0])
+            
         
         # Last row
         if currentRow:
