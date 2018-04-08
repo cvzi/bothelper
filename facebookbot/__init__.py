@@ -18,7 +18,9 @@ class FacebookBot:
   
   
     specifications = {
-        "maxMessageLength" : 2000
+        "maxMessageLength" : 2000,
+        "maxButtonTitleLength" : 20, # https://developers.facebook.com/docs/messenger-platform/send-api-reference/quick-replies
+        "maxButtons" : 11,
         }
 
   
@@ -162,19 +164,23 @@ class FacebookBot:
             "message": message
         }
         
+        if buttons and len(buttons) > self.specifications["maxButtons"]:
+            print("FacebookBot.__sendMessage: Max %d/%d quick-reply buttons supported" % (len(buttons), self.specifications["maxButtons"]))
+            buttons = buttons[:self.specifications["maxButtons"]]
+        
         if buttons is not None and len(buttons) > 0:
             # Quick-reply documentation: https://developers.facebook.com/docs/messenger-platform/send-api-reference/quick-replies
             quick_replies = []
             for button in buttons:
             
                 title = self.serv._emojize(button[0])
-                if len(title) > 20:
-                    print("FacebookBot.__sendMessage: Quick-reply/button title has a 20 character limit")
+                if len(title) > self.specifications["maxButtonTitleLength"]:
+                    print("FacebookBot.__sendMessage: Quick-reply/button title has a %d/%d character limit" % (len(title), self.specifications["maxButtonTitleLength"]))
                     
                 
                 quick_replies.append({
                     "content_type" : "text",
-                    "title" : title[0:20],
+                    "title" : title[0:self.specifications["maxButtonTitleLength"]],
                     "payload" : button[1] if isinstance(button[1], str) else button[0]
                   })
             data["message"]["quick_replies"] = quick_replies

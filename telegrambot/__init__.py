@@ -18,7 +18,8 @@ class TelegramBot:
     
     specifications = {
         "maxMessageLength" : 4096,
-        "truncateInlineButtonTitle" : 40 # Chararacters. This is a guess, there's nothing in the official documentation
+        "truncateInlineButtonTitle" : 40, # Chararacters. This is a guess, there's nothing in the official documentation
+        "maxInlineButtonPerLine" : 6
         }
     
     
@@ -65,15 +66,17 @@ class TelegramBot:
         return 'OK'
     
     def userIdFromFrom(self, from_id):
-        # return str(from_id)
-        return "@t:%d" % from_id
+        return "@tg:%d" % from_id
+        
+    def fromFromMsg(self, msg):
+        return int(msg["_userId"][4:])
         
     def __handleMessage(self, message):
         content_type, chat_type, chat_id = telepot.glance(message)
         
         message["_bot"] = self
         message["_userId"] = self.userIdFromFrom(message["from"]["id"])
-            
+        
         if content_type == "text":
             return self.serv._handleTextMessage(message)
         elif content_type == "location":
@@ -116,18 +119,19 @@ class TelegramBot:
         charsInRow = 0
         currentRow = []
         for button in buttons:
+            realtxt = self.serv._emojize(button[0])
             inlineKeyboardButton = telepot.namedtuple.InlineKeyboardButton(text=self.serv._emojize(button[0]), callback_data=button[1] if isinstance(button[1], str) else button[0])
             
-            if charsInRow + len(button[0]) < self.specifications["truncateInlineButtonTitle"]:
+            if charsInRow + len(realtxt) < self.specifications["truncateInlineButtonTitle"] and len(currentRow) < self.specifications["maxInlineButtonPerLine"]:
                 # Append button to current row
                 currentRow.append(inlineKeyboardButton)
-                charsInRow += len(button[0])
+                charsInRow += len(realtxt) + 2
             else:
                 # Create a new row
                 if currentRow:
                     inlineKeyboardButtons.append(currentRow) # Append old (full) row
                 currentRow = [inlineKeyboardButton]
-                charsInRow = len(button[0])
+                charsInRow = len(realtxt) + 2
             
         
         # Last row
@@ -140,7 +144,7 @@ class TelegramBot:
             
     def sendText(self, msg, text, buttons=None):
     
-        return_id = int(msg["_userId"][3:])
+        return_id = self.fromFromMsg(msg)
         
         reply_markup = self._reply_markup(buttons)
         
@@ -148,7 +152,8 @@ class TelegramBot:
         
     def sendLink(self, msg, url, buttons=None):
         # Telegram supports no special way of sending links, so just send the raw URL as text
-        return_id = int(msg["_userId"][3:])
+        
+        return_id = self.fromFromMsg(msg)
         
         reply_markup = self._reply_markup(buttons)
         
@@ -157,7 +162,7 @@ class TelegramBot:
         
     def sendPhoto(self, msg, url, buttons=None):
     
-        return_id = int(msg["_userId"][3:])
+        return_id = self.fromFromMsg(msg)
         
         reply_markup = self._reply_markup(buttons)
         

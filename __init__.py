@@ -335,6 +335,13 @@ class Bot:
     def addPermanentStorage(self, storage):
         self.userStorage = storage
         
+    def getPermanentStorage(self):
+        return self.userStorage
+        
+    def getBotByName(self, name):
+        for bot in self.bots:
+            if type(bot).__name__ == name:
+                return bot
         
     def getFlask(self):
         if self.__flaskServer is None:
@@ -380,7 +387,7 @@ class Bot:
     def user(self, msg):
         userId = msg["_userId"]
         if not userId in self.users:
-            self.users[userId] = User(userId=userId, lastMsg=msg, storage=self.userStorage)
+            self.users[userId] = User(userId=userId, lastMsg=msg, storage=self.userStorage, bot=msg["_bot"])
         
         self.users[userId].msg(msg)
         return self.users[userId]
@@ -438,14 +445,15 @@ class Bot:
 
 class User:
 
-    def __init__(self, userId, lastMsg=None, storage=None):
+    def __init__(self, userId, lastMsg=None, storage=None, bot=None):
         self.__lastMsg = lastMsg
         self.userId = userId
+        self.bot = bot
         self.storage = storage
         self.data = {}
         self.userdata = {}
         if self.storage is not None:
-            self.userdata = self.storage.retrieve(userId)
+            self.userdata = self.storage.retrieve(self.bot, userId)
         self.conversation = None
         self.onOtherResponseNAME = "__onOtherResponse__123"
         
@@ -476,13 +484,18 @@ class User:
     def storeValue(self, key, value):
         self.userdata[key] = value
         if self.storage is not None:
-            self.storage.store(self.userId, key, value)
+            self.storage.store(self.bot, self.userId, key, value)
         
     def retrieveValue(self, key, default=None):
         if key in self.userdata:
             return self.userdata[key]
         else:
             return default
+        
+    def clearValues(self):
+        self.userdata = {}
+        if self.storage is not None:
+            self.storage.clear(self.bot, self.userId)
         
     def rememeberOnOtherResponse(self, onOtherResponse, onOtherResponseReturn=None):
         self.rememberResponse((self.onOtherResponseNAME, (onOtherResponse, onOtherResponseReturn)))

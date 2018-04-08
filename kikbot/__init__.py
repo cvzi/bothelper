@@ -14,10 +14,13 @@ class KikBot:
         "maxMessageLength" : 1000, # TODO Just a guess. What's the real limit? 
         "maxMessagesPerUser" : 5, # https://dev.kik.com/#/docs/messaging#sending-messages
         "maxMessagesPerBatch" : 25, # https://dev.kik.com/#/docs/messaging#rate-limits
-        "waitBetweenBatches" : 2
+        "maxBroadcastsPerBatch" : 100, # https://dev.kik.com/#/docs/messaging#rate-limits
+        "waitBetweenBatches" : 2,
+        "restrictedChars" : {
+            "\x84" : "\"",
+            }
+        
         }
-        
-        
         
     def __init__(self, serv, flaskserver, route, name, apikey, webhook_host):
         """
@@ -32,6 +35,10 @@ class KikBot:
         self.kik_api = kik.KikApi(name, apikey)
         self.kik_api.set_configuration(kik.Configuration(webhook=webhook_host+route))
          
+    def _sanitize(self, text):
+        for key in self.specifications["restrictedChars"]:
+            text = text.replace(key, self.specifications["restrictedChars"][key])
+        return text
 
     def __incoming(self):
         """
@@ -105,6 +112,54 @@ class KikBot:
         else:
             self.kik_api.send_messages(response_messages)
         
+        
+    def __sendBroadcasts(self, response_messages):
+        if not response_messages:
+            return
+        
+        if len(response_messages) > self.specifications["maxMessagesPerUser"]:
+            remaining = response_messages
+            while len(remaining) > 0:
+                # Respect limits: https://dev.kik.com/#/docs/messaging#sending-messages and https://dev.kik.com/#/docs/messaging#rate-limits
+                current_batch = [] # Collect messages to send now, respecting both limits
+                next_batch = [] # These messages should be sent in next batch, before the remaining message
+                to_users = {} # Count messages per user in batch
+                i = 0 # Count total messages in batch
+                N = self.specifications["maxBroadcastsPerBatch"] # Max messages per Batch
+                for message in remaining[0:N]:
+                    if not message.to in to_users:
+                        to_users[message.to] = 0
+                    
+                    if to_users[message.to] < self.specifications["maxMessagesPerUser"] and i < N:
+                        # Ok
+                        current_batch.append(message)
+                    elif i < N:
+                        # user has enough messages in this batch
+                        next_batch.append(message)
+                    else:
+                        # batch is full with messages. 
+                        next_batch.append(message)
+                    
+                    to_users[message.to] += 1
+                    i += 1
+                
+                if current_batch:
+                    # Send batch
+                    self.__sendBroadcasts(current_batch)
+                
+                remaining = next_batch + remaining[N:]
+                
+                if current_batch and remaining:
+                    # Wait before sending the next batch
+                    time.sleep(specifications["waitBetweenBatches"])
+                
+        else:
+            self.kik_api.send_broadcast(response_messages)
+        
+        
+        
+        
+        
     
     def __handleMessage(self, message):
         message["_bot"] = self
@@ -177,10 +232,13 @@ class KikBot:
                 responses.append(response)
             keyboards = [kik.messages.SuggestedResponseKeyboard(responses=responses)]
     
+        if not "_responseMessages" in msg:
+            msg["_responseMessages"] = []
+    
         msg["_responseMessages"].append(kik.messages.TextMessage(
             to=msg["_userId"],
             chat_id=msg["chatId"],
-            body=self.serv._emojize(text),
+            body=self._sanitize(self.serv._emojize(text)),
             keyboards=keyboards
             )
         )
@@ -188,6 +246,35 @@ class KikBot:
         if msg["_responseSent"]:
             # The original message was already sent back, so we need to send the reply separately
             self.__sendMessages(msg["_responseMessages"])
+        
+    def broadcastText(self, broadcasts, batch=None):
+        """ 
+        broadcasts is a list of messages in this format: (userId, chatId, text, buttons)
+        """
+        
+        if batch is None:
+            batch = []
+            
+            
+        for userId, chatId, text, buttons in broadcasts:
+            keyboards = None
+            if buttons is not None:
+                responses = []
+                for button in buttons:
+                    response = kik.messages.TextResponse(self.serv._emojize(button[0]))
+                    response.metadata = {"_type": "SuggestedTextResponse", "_button" : button[1] if isinstance(button[1], str) else button[0]}
+                    responses.append(response)
+                keyboards = [kik.messages.SuggestedResponseKeyboard(responses=responses)]
+        
+            batch.append(kik.messages.TextMessage(
+                to=userId,
+                chat_id=chatId,
+                body=self._sanitize(self.serv._emojize(text)),
+                keyboards=keyboards
+                )
+            )
+
+        self.__sendBroadcasts(batch)
         
     def sendLink(self, msg, url, buttons=None):
         keyboards = None
@@ -199,6 +286,9 @@ class KikBot:
                 responses.append(response)
             keyboards = [kik.messages.SuggestedResponseKeyboard(responses=responses)]
     
+        if not "_responseMessages" in msg:
+            msg["_responseMessages"] = []
+            
         msg["_responseMessages"].append(kik.messages.LinkMessage(
             to=msg["_userId"],
             chat_id=msg["chatId"],
@@ -220,7 +310,10 @@ class KikBot:
                 response.metadata = {"_type": "SuggestedTextResponse", "_button" : button[1] if isinstance(button[1], str) else button[0]}
                 responses.append(response)
             keyboards = [kik.messages.SuggestedResponseKeyboard(responses=responses)]
-    
+        
+        if not "_responseMessages" in msg:
+            msg["_responseMessages"] = []
+            
         msg["_responseMessages"].append(kik.messages.PictureMessage(
             to=msg["_userId"],
             chat_id=msg["chatId"],
