@@ -9,7 +9,7 @@ import flask
 
 
 
-API_URL = "https://graph.facebook.com/v2.6/me/"
+API_URL = "https://graph.facebook.com/v3.0/me/"
 
 class FacebookBot:
     """
@@ -21,10 +21,11 @@ class FacebookBot:
         "maxMessageLength" : 2000,
         "maxButtonTitleLength" : 20, # https://developers.facebook.com/docs/messenger-platform/send-api-reference/quick-replies
         "maxButtons" : 11,
+        "getStartedPayloadLength" : 1000 # https://developers.facebook.com/docs/messenger-platform/reference/messenger-profile-api/get-started-button#properties
         }
 
   
-    def __init__(self, serv, flaskserver, route, app_secret, verify_token, access_token, start_message=None):
+    def __init__(self, serv, flaskserver, route, app_secret, verify_token, access_token, start_message=None, start_button=True):
         """
         It is suggested to use a secret :param route: to ensure that nobody can send malicious 
         requests.
@@ -42,7 +43,19 @@ class FacebookBot:
         flaskserver.route(route, methods=['POST'], endpoint=endpointPost)(self.__onPost)  
         
         if start_message is not None:
-            self.setStartMessage(start_message)
+            try:
+                self.setStartMessage(start_message)
+            except Exception as e:
+                print("setStartMessage() failed: %s" % str(e))
+                
+        if start_button:
+            try:
+                if isinstance(start_button, str):
+                    self.setGetStartedButton(start_button)
+                else:
+                    self.setGetStartedButton()
+            except Exception as e:
+                print("setGetStartedButton() failed: %s" % str(e))
             
     def __send(self, data, section="messages"):
                 
@@ -106,9 +119,11 @@ class FacebookBot:
         #print(str(data).encode("unicode-escape"))  # Good for testing
 
         
-        if data and "object" in data and data["object"] == "page":
-
+        if data and "object" in data and data["object"] == "page" and "entry" in data and data["entry"]:
             for entry in data["entry"]:
+                print(data["entry"])
+                if not "messaging" in entry or not entry["messaging"]:
+                    continue
                 for messaging_event in entry["messaging"]:
 
                     if messaging_event.get("message"):  # someone sent us a message
@@ -199,7 +214,7 @@ class FacebookBot:
             "text" : self.serv._emojize(text)
         }, buttons)
     
-    def sendLink(self, msg, url, buttons=None):
+    def sendLink(self, msg, url, buttons=None, text=""):
         try:
             domain = url.split("//" , 1)[1]
             if domain.startswith("www."):
@@ -211,6 +226,11 @@ class FacebookBot:
             button_text = "Open %s" % domain
         except:
             button_text = "Open website"
+            
+        if text:
+            text = self.serv._emojize(text)
+        else:
+            text = url
         
         # Ref.: https://developers.facebook.com/docs/messenger-platform/reference/buttons/url
         return self.__sendMessage(msg["_userId"], {
@@ -218,7 +238,7 @@ class FacebookBot:
                 "type" : "template",
                 "payload" : {   
                     "template_type": "button",
-                    "text": url,
+                    "text": text,
                     "buttons": [
                       {
                         "type":"web_url",
@@ -256,7 +276,7 @@ class FacebookBot:
         if isinstance(greeting, str):
             data["greeting"] = [{
                 "locale" : "default",
-                "text" : greeting }]
+                "text" : self.serv._emojize(greeting) }]
             
         else:
             data["greeting"] = greeting
@@ -268,5 +288,22 @@ class FacebookBot:
         assert ret["result"] == "success"
         
 
+
+    def setGetStartedButton(self, payload="/start"):
+        """
+        Enablle the Get Started Button as defined in
+        `https://developers.facebook.com/docs/messenger-platform/discovery/welcome-screen#set_postback`_
+        """
+        data = {}
+        data["get_started"] = {
+            "payload" : self.serv._emojize(payload)[0:self.specifications["getStartedPayloadLength"]]
+        }
+            
+        r = self.__send(data, section="messenger_profile")
+        
+        ret = json.loads(r.text)
+        
+        assert ret["result"] == "success"
+        
 
         
