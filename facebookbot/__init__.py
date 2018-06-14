@@ -127,7 +127,6 @@ class FacebookBot:
                 for messaging_event in entry["messaging"]:
 
                     if messaging_event.get("message"):  # someone sent us a message
-
                         self.__handleMessage(messaging_event)
 
                     if messaging_event.get("delivery"):  # delivery confirmation
@@ -137,7 +136,7 @@ class FacebookBot:
                         pass
 
                     if messaging_event.get("postback"):  # user clicked/tapped "postback" button in earlier message
-                        pass
+                        self.__handlePostback(messaging_event)
         else:
             print("__onPost: No data")
                         
@@ -165,11 +164,32 @@ class FacebookBot:
         if "quick_reply" in messaging_event["message"]:
             messaging_event["text"] = messaging_event["message"]["quick_reply"]["payload"]
             return self.serv._handleButtonClick(messaging_event)  
+        elif "postback" in messaging_event["message"]:
+            if "payload" in messaging_event["message"]["postback"]:
+                messaging_event["text"] = messaging_event["message"]["postback"]["payload"]
+            else:
+                messaging_event["text"] = messaging_event["message"]["postback"]["title"]
+            return self.serv._handleTextMessage(messaging_event)
         elif "text" in messaging_event["message"]:
             messaging_event["text"] = messaging_event["message"]["text"]
-            return self.serv._handleTextMessage(messaging_event)  
+            return self.serv._handleTextMessage(messaging_event)
         
 
+    def __handlePostback(self, messaging_event):
+        messaging_event["_bot"] = self
+        messaging_event["_userId"] = messaging_event["sender"]["id"] 
+        
+        #print(str(messaging_event).encode("unicode-escape"))  # Good for testing
+        
+        if "postback" in messaging_event:
+            if "payload" in messaging_event["postback"]:
+                messaging_event["text"] = messaging_event["postback"]["payload"]
+            else:
+                messaging_event["text"] = messaging_event["postback"]["title"]
+            return self.serv._handleTextMessage(messaging_event)
+
+        
+        
     def __sendMessage(self, recipient_id, message, buttons):
         data = {
             "messaging_type" : "RESPONSE",
