@@ -5,6 +5,7 @@ import os
 import re
 import inspect
 import pickle
+import threading
 
 # pip
 import emoji
@@ -146,8 +147,8 @@ class ServerHelper:
         
         return msg["_bot"].sendText(msg, text, buttons)
             
-    def _sendLink(self, msg, url, buttons=None):
-        return msg["_bot"].sendLink(msg, url, buttons)
+    def _sendLink(self, msg, url, buttons=None, text=""):
+        return msg["_bot"].sendLink(msg, url, buttons, text)
             
     def _sendPhoto(self, msg, url, buttons=None):
     
@@ -197,7 +198,14 @@ class ServerHelper:
         print("No handler found for text message: %s" % msg["text_nice"].encode('unicode-escape').decode('ascii'))
         return False
         
-
+        
+    def _handleFriendPicker(self, msg):
+        if hasattr(self.bot, 'onFriendPicker'):
+            self.bot.onFriendPicker(msg)
+            return True
+        return False
+        
+        
     def _handleLocation(self, msg):
         if hasattr(self.bot, 'onLocation'):
             self.bot.onLocation(msg)
@@ -368,9 +376,10 @@ class Bot:
     
     def run(self, runFlask=True, host='127.0.0.1', port=8080):   
         """Starts all bots.
-        If runFlask is True, it will run the Flask on standard host/port. 
+        If runFlask is True, it will run Flask's server on standard host/port. 
         This call will block the current thread forever. 
-        If False, it will just return the Flask and you may run it later."""
+        If False, it will just return the Flask and you may run it later.
+        You should not use Flask's server for production/deployment"""
         
         print("Starting "+self.title+"...")
         for bot in self.bots:
@@ -399,15 +408,23 @@ class Bot:
     def endConversation(self, msg):
         self.user(msg).endConversation()
 
+    def createEmptyMessage(self, fromMsg, toUserId):
+        return {
+            "_bot" : fromMsg["_bot"],
+            "_responseMessages" : [],
+            "_responseSent" : True,
+            "_userId" : toUserId
+        }
+        
     def sendText(self, msg, text, buttons=None):
         if isinstance(msg, User):
             msg = msg.msg()
         return self.serv._sendText(msg, text, buttons)
         
-    def sendLink(self, msg, url, buttons=None):
+    def sendLink(self, msg, url, buttons=None, text=""):
         if isinstance(msg, User):
             msg = msg.msg()
-        return self.serv._sendLink(msg, url, buttons)
+        return self.serv._sendLink(msg, url, buttons, text)
         
         
     def sendPhoto(self, msg, url, buttons=None):
@@ -438,6 +455,26 @@ class Bot:
         if self.userFile is not None:
             with open(self.userFile, "wb") as fs:
                 pickle.dump(self.users, fs)
+                
+                
+    def runInThread(self, fun, *args, **kwargs):
+        try:
+            import asyncio
+        except:
+            pass
+        
+        def runIt(loop, *args, **kwargs):
+            if loop:
+                asyncio.set_event_loop(loop)
+            fun(*args, **kwargs)
+        
+        try:
+            loop = asyncio.get_event_loop()
+        except RuntimeError:
+            loop = None
+        t = threading.Thread(target=runIt, args=(loop, *args), kwargs=kwargs)
+        t.daemon = True
+        t.start()
 
 
 
