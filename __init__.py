@@ -460,7 +460,7 @@ class Bot:
     def runInThread(self, fun, *args, **kwargs):
         try:
             import asyncio
-        except:
+        except ModuleNotFoundError:
             pass
         
         def runIt(loop, *args, **kwargs):
@@ -470,7 +470,7 @@ class Bot:
         
         try:
             loop = asyncio.get_event_loop()
-        except RuntimeError:
+        except (RuntimeError, NameError):
             loop = None
         t = threading.Thread(target=runIt, args=(loop, *args), kwargs=kwargs)
         t.daemon = True
