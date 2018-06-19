@@ -150,14 +150,19 @@ class TelegramBot:
         
         self.telepotBot.sendMessage(return_id, self.serv._emojize(text), reply_markup=reply_markup)
         
-    def sendLink(self, msg, url, buttons=None):
+    def sendLink(self, msg, url, buttons=None, text=""):
         # Telegram supports no special way of sending links, so just send the raw URL as text
         
         return_id = self.fromFromMsg(msg)
         
         reply_markup = self._reply_markup(buttons)
         
-        self.telepotBot.sendMessage(return_id, url, reply_markup=reply_markup, disable_web_page_preview=False)
+        if text:
+            text = url + "\n" + self.serv._emojize(text)
+        else:
+            text = url
+        
+        self.telepotBot.sendMessage(return_id, text, reply_markup=reply_markup, disable_web_page_preview=False)
 
         
     def sendPhoto(self, msg, url, buttons=None):

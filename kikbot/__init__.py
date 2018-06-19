@@ -7,6 +7,8 @@ import kik.messages
 import threading
 import time
 
+from pprint import pprint
+
 class KikBot:
 
 
@@ -167,13 +169,16 @@ class KikBot:
         message["_responseMessages"] = []
         message["_responseSent"] = False
         
-        from pprint import pprint
-        pprint(message)
+        if "type" in message  and message["type"] != "text":
+            pprint(message)
         
         if "metadata" in message and message["metadata"] and "_type" in message["metadata"]:
             if message["metadata"]["_type"] == "SuggestedTextResponse":
                 message["text"] = message["metadata"]["_button"]
                 self.serv._handleButtonClick(message)
+            elif message["metadata"]["_type"] == "FriendPickerResponse":
+                message["text"] = message["metadata"]["_button"]
+                self.serv._handleFriendPicker(message)
             else:
                 raise Exception("Unkown _type in metadata: _type=%s" % str(message["metadata"]["_type"]))
         
@@ -192,6 +197,12 @@ class KikBot:
                 message["text"] = "/start"
             self.serv._handleTextMessage(message)
         
+        elif message["type"] == "friend-picker":
+            if "metadata" in message:
+                message["text"] = message["metadata"]
+            else:
+                message["text"] = None
+            self.serv._handleFriendPicker(message)
         
         elif message["type"] == "text":
             message["text"] = message["body"]
@@ -221,23 +232,34 @@ class KikBot:
             return batch
         
         return message["_responseMessages"]
-            
-    def sendText(self, msg, text, buttons=None):
+    
+    
+    def _formatButtons(self, buttons):
         keyboards = None
         if buttons is not None:
             responses = []
             for button in buttons:
-                response = kik.messages.TextResponse(self.serv._emojize(button[0]))
-                response.metadata = {"_type": "SuggestedTextResponse", "_button" : button[1] if isinstance(button[1], str) else button[0]}
-                responses.append(response)
+                if button[1] == "friend-picker":
+                    response = kik.messages.FriendPickerResponse(self.serv._emojize(button[0]))
+                    response.metadata = {"_type": "FriendPickerResponse", "_button" : button[1]}
+                    responses.append(response)
+                else:
+                    response = kik.messages.TextResponse(self.serv._emojize(button[0]))
+                    response.metadata = {"_type": "SuggestedTextResponse", "_button" : button[1] if isinstance(button[1], str) else button[0]}
+                    responses.append(response)
             keyboards = [kik.messages.SuggestedResponseKeyboard(responses=responses)]
+        return keyboards
+    
+    
+    def sendText(self, msg, text, buttons=None):
+        keyboards = self._formatButtons(buttons)
     
         if not "_responseMessages" in msg:
             msg["_responseMessages"] = []
     
         msg["_responseMessages"].append(kik.messages.TextMessage(
             to=msg["_userId"],
-            chat_id=msg["chatId"],
+            chat_id=msg["chatId"] if "chatId" in msg else None,
             body=self._sanitize(self.serv._emojize(text)),
             keyboards=keyboards
             )
@@ -257,14 +279,7 @@ class KikBot:
             
             
         for userId, chatId, text, buttons in broadcasts:
-            keyboards = None
-            if buttons is not None:
-                responses = []
-                for button in buttons:
-                    response = kik.messages.TextResponse(self.serv._emojize(button[0]))
-                    response.metadata = {"_type": "SuggestedTextResponse", "_button" : button[1] if isinstance(button[1], str) else button[0]}
-                    responses.append(response)
-                keyboards = [kik.messages.SuggestedResponseKeyboard(responses=responses)]
+            keyboards = self._formatButtons(buttons)
         
             batch.append(kik.messages.TextMessage(
                 to=userId,
@@ -276,40 +291,37 @@ class KikBot:
 
         self.__sendBroadcasts(batch)
         
-    def sendLink(self, msg, url, buttons=None):
-        keyboards = None
-        if buttons is not None:
-            responses = []
-            for button in buttons:
-                response = kik.messages.TextResponse(self.serv._emojize(button[0]))
-                response.metadata = {"_type": "SuggestedTextResponse", "_button" : button[1] if isinstance(button[1], str) else button[0]}
-                responses.append(response)
-            keyboards = [kik.messages.SuggestedResponseKeyboard(responses=responses)]
+    def sendLink(self, msg, url, buttons=None, text=""):
+        keyboards = self._formatButtons(buttons)
     
         if not "_responseMessages" in msg:
             msg["_responseMessages"] = []
             
-        msg["_responseMessages"].append(kik.messages.LinkMessage(
-            to=msg["_userId"],
-            chat_id=msg["chatId"],
-            url=url,
-            keyboards=keyboards
+        if text:
+            msg["_responseMessages"].append(kik.messages.LinkMessage(
+                to=msg["_userId"],
+                chat_id=msg["chatId"],
+                url=url,
+                text=self.serv._emojize(text),
+                keyboards=keyboards
+                )
             )
-        )
-        
+        else:
+            msg["_responseMessages"].append(kik.messages.LinkMessage(
+                to=msg["_userId"],
+                chat_id=msg["chatId"],
+                url=url,
+                keyboards=keyboards
+                )
+            )
+            
+            
         if msg["_responseSent"]:
             # The original message was already sent back, so we need send the reply separately
             self.__sendMessages(msg["_responseMessages"])
             
     def sendPhoto(self, msg, url, buttons=None):
-        keyboards = None
-        if buttons is not None:
-            responses = []
-            for button in buttons:
-                response = kik.messages.TextResponse(self.serv._emojize(button[0]))
-                response.metadata = {"_type": "SuggestedTextResponse", "_button" : button[1] if isinstance(button[1], str) else button[0]}
-                responses.append(response)
-            keyboards = [kik.messages.SuggestedResponseKeyboard(responses=responses)]
+        keyboards = self._formatButtons(buttons)
         
         if not "_responseMessages" in msg:
             msg["_responseMessages"] = []
@@ -325,4 +337,7 @@ class KikBot:
         if msg["_responseSent"]:
             # The original message was already sent back, so we need send the reply separately
             self.__sendMessages(msg["_responseMessages"])
+    
+    
+    
     

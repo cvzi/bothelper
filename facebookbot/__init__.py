@@ -164,12 +164,7 @@ class FacebookBot:
         if "quick_reply" in messaging_event["message"]:
             messaging_event["text"] = messaging_event["message"]["quick_reply"]["payload"]
             return self.serv._handleButtonClick(messaging_event)  
-        elif "postback" in messaging_event["message"]:
-            if "payload" in messaging_event["message"]["postback"]:
-                messaging_event["text"] = messaging_event["message"]["postback"]["payload"]
-            else:
-                messaging_event["text"] = messaging_event["message"]["postback"]["title"]
-            return self.serv._handleTextMessage(messaging_event)
+        
         elif "text" in messaging_event["message"]:
             messaging_event["text"] = messaging_event["message"]["text"]
             return self.serv._handleTextMessage(messaging_event)

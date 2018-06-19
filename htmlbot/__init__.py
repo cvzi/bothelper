@@ -156,15 +156,20 @@ class HtmlBot:
             }
         )
         
-    def sendLink(self, msg, url, buttons=None):
+    def sendLink(self, msg, url, buttons=None, text=""):
         b = None
         if buttons:
             b = [(button[0], button[1] if isinstance(button[1], str) else button[0]) for button in buttons]
             
     
+        if text:
+            text = "<br>" + html.escape(self.serv._emojize(text))
+        else:
+            text = ""
+        
         msg["_responseMessages"].append({
             "to" : msg["_userId"],
-            "html" : '<a href="'+html.escape(url)+'">'+html.escape(url.split("://", 1)[1])+'</a>',
+            "html" : '<a href="'+html.escape(url)+'">'+html.escape(url.split("://", 1)[1])+'</a>' + text,
             "buttons" : b
             }
         )
