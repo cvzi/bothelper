@@ -1,9 +1,9 @@
 # bothelper
-Small library for kik, Telegram and Facebook Messenger bots
+Small library for kik, Telegram, Discord and Facebook Messenger bots
 
 Features:
 ---------
-Supported are Kik, Telegram and Facebook messenger and a chat function on a HTML site (primarily for testing).  
+Supported are Kik, Telegram, Discord and Facebook messenger and a chat function on a HTML site (primarily for testing).  
 The bots are running on a flask server. The Telegram bot also supports the message loop version without server.  
 
 Currently it can only handle incoming text messages (and locations for Telegram and Facebook) and sending text messages.
@@ -46,6 +46,7 @@ from bothelper import telegrambot
 from bothelper import kikbot
 from bothelper import facebookbot
 from bothelper import htmlbot
+from bothelper import discordbot
 
 import bothelper
 
@@ -92,7 +93,7 @@ if __name__ == '__main__':
     #myBot.addFlaskBot(bottype=facebookbot.FacebookBot, route="/facebook", app_secret="123", verify_token="ABC", access_token="XYZ", start_message=myBot.startMessageText)
     #myBot.addFlaskBot(bottype=kikbot.KikBot, route="/kik", name="myminimalkikbotname", apikey="ABC", webhook_host=HOSTNAME)
     #myBot.addFlaskBot(bottype=telegrambot.TelegramBot, route="/telegram", token="XYZ", webhook_host=HOSTNAME)
-    
+    #myBot.addBot(bottype=discordbot.DiscordBot, token="MmRI4CLSaNfpT8ap6itJIoIg.TqkHmw.DGBHtV_ggYjDZ9728rZXUa-Bc5L", prefix="mybot!")
     myBot.run(port=80) # http://127.0.0.1:80/
 
 
@@ -105,4 +106,6 @@ Requirements
  * [flag](https://github.com/cvzi/flag)
  * [telepot](https://pypi.python.org/pypi/telepot) (only if you want to use the Telegram bot)
  * [kik](https://pypi.python.org/pypi/kik) (only if you want to use the Kik bot)
+ * [discord.py](https://pypi.org/project/discord.py/) (only if you want to use the Discord bot)
+ * [requests](https://pypi.org/project/requests/) (only if you want to use the Facebook Messenger bot)
 
