@@ -9,6 +9,7 @@ class DiscordBot:
     
     
     specifications = {
+        "maxMessageLength" : 2000, # https://discordia.me/server-limits#other-limits
         }
     
     def __init__(self, serv, token, prefix=None):
@@ -54,10 +55,21 @@ class DiscordBot:
             "_bot" : self,
             "_userId" : server.owner.id,
             "text" : "/start",
-            "__server" : server,
-            "__channel" : server.default_channel
+            "__server" : server
         }
-        return self.serv._handleTextMessage(msg)
+        channels = []
+        for channel in server.channels:
+            if channel.type == discord.ChannelType.text and channel.permissions_for(server.me).send_messages:
+                if channel.name == "general":
+                    channel.position = -1
+                channels.append(channel)
+        
+        if channels:
+            channels.sort(key=lambda c: c.position)
+            msg["__channel"] = channels[0]
+            return self.serv._handleTextMessage(msg)
+        return
+        
         
     def __on_message(self, message):
         if message.author.bot: # Do not reply to bot messages
