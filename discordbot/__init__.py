@@ -10,6 +10,8 @@ class DiscordBot:
     
     specifications = {
         "maxMessageLength" : 2000, # https://discordia.me/server-limits#other-limits
+        "waitForReply" : 5,
+        "waitForExpectedReply" : 360
         }
     
     def __init__(self, serv, token, prefix=None):
@@ -25,6 +27,7 @@ class DiscordBot:
             self.prefixes = tuple(sorted(self.prefixes, key=len, reverse=True))
         if isinstance(self.prefixes, str) and self.prefixes.strip() == "":
             self.prefixes = None
+        self.sentmessages = []
         
         @self.client.event
         async def on_ready():
@@ -55,7 +58,9 @@ class DiscordBot:
             "_bot" : self,
             "_userId" : server.owner.id,
             "text" : "/start",
-            "__server" : server
+            "__server" : server,
+            "__message" : None,
+            "__on_server_join" : True
         }
         channels = []
         for channel in server.channels:
@@ -77,10 +82,22 @@ class DiscordBot:
             
         text = message.content
         
+        
+        
         if self.prefixes is not None:
             if not text.startswith(self.prefixes):
-                # Do not reply to message
-                return
+                # Is this message a reply?
+                is_reply = False
+                for sentmessage in reversed(self.sentmessages):
+                    if sentmessage.message and sentmessage.reply_to and sentmessage.message.server == message.server and sentmessage.message.channel == message.channel and sentmessage.reply_to.author == message.author:
+                        diff = message.timestamp - sentmessage.message.timestamp
+                        if (sentmessage.expects_reply and diff.seconds < self.specifications["waitForExpectedReply"]) or diff.seconds < self.specifications["waitForReply"]:
+                            is_reply = True
+                            self.sentmessages.remove(sentmessage)
+                            break
+                if not is_reply:
+                    # Do not reply to message
+                    return
             else:
                 # Remove prefix
                 for prefix in self.prefixes:
@@ -94,10 +111,19 @@ class DiscordBot:
             "_userId" : message.author.id,
             "text" : text,
             "__message" : message,
-            "__channel" : message.channel
+            "__channel" : message.channel,
+            "__author" : message.author,
         }
         
         return self.serv._handleTextMessage(msg)
+    
+    class MessageReply:
+        def __init__(self, message, reply_to, expects_reply):
+            self.message = message
+            self.reply_to = reply_to
+            self.expects_reply = expects_reply
+    
+        
     
     def __formatButtons(self, buttons):
         text = ""
@@ -109,6 +135,18 @@ class DiscordBot:
         if text:
             text = "\n" + text
         return text
+    
+    async def __send_message2(self, expects_reply, reply_to, destination, *args, **kwargs):
+        m = await self.client.send_message(destination, *args, **kwargs)
+        r = DiscordBot.MessageReply(m, reply_to, expects_reply)
+        self.sentmessages.append(r)
+        if len(self.sentmessages) > 1000:
+            self.sentmessages = self.sentmessages[-30:]
+        
+        
+    def __send_message(self, msg, expects_reply, *args, **kwargs):
+        asyncio.ensure_future(self.__send_message2(expects_reply, msg["__message"], msg["__channel"], *args, **kwargs))
+        
             
     def sendText(self, msg, text, buttons=None):
         text = self.serv._emojize(text)
@@ -116,9 +154,21 @@ class DiscordBot:
         if buttons:
             text += self.__formatButtons(buttons)
         
-        t = self.client.send_message(msg["__channel"], text)
-        asyncio.ensure_future(t)
+        self.__send_message(msg, False, text)
 
+    def sendQuestion(self, msg, text, buttons=None):
+        text = self.serv._emojize(text)
+        
+        if buttons:
+            text += self.__formatButtons(buttons)
+        
+        self.__send_message(msg, True, text)
+
+
+        
+        
+        
+        
     def sendLink(self, msg, url, buttons=None, text=""):
         """# Just send the raw URL as text
         
@@ -136,9 +186,7 @@ class DiscordBot:
         if text.strip():
             embed.description = text
         
-        t = self.client.send_message(msg["__channel"], embed=embed)
-        asyncio.ensure_future(t)
-        
+        self.__send_message(msg, False, embed=embed)
         
         
     def sendPhoto(self, msg, url, buttons=None):
@@ -150,7 +198,6 @@ class DiscordBot:
             text = self.__formatButtons(buttons)
             embed.description = text
         
-        t = self.client.send_message(msg["__channel"], embed=embed)
-        asyncio.ensure_future(t)
+        self.__send_message(msg, False, embed=embed)
         
         
