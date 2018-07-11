@@ -150,6 +150,20 @@ class TelegramBot:
         
         self.telepotBot.sendMessage(return_id, self.serv._emojize(text), reply_markup=reply_markup)
         
+        
+    def sendQuestion(self, msg, text, buttons=None):
+        if buttons:
+            # Currently only EITHER a reply keyborad OR force_reply is supported, so let's only use the keyboard for now
+            self.sendText(msg, text, buttons)
+        else:
+            return_id = self.fromFromMsg(msg)
+            
+            reply_markup = telepot.namedtuple.ForceReply()
+            
+            self.telepotBot.sendMessage(return_id, self.serv._emojize(text), reply_markup=reply_markup)
+        
+        
+        
     def sendLink(self, msg, url, buttons=None, text=""):
         # Telegram supports no special way of sending links, so just send the raw URL as text
         

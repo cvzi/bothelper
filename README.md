@@ -4,23 +4,26 @@ Small library for kik, Telegram, Discord and Facebook Messenger bots
 Features:
 ---------
 Supported are Kik, Telegram, Discord and Facebook messenger and a chat function on a HTML site (primarily for testing).  
-The bots are running on a flask server. The Telegram bot also supports the message loop version without server.  
+The bots are running on a flask server. The Telegram bot and the Discord bot also support the message loop version without a server.  
 
-Currently it can only handle incoming text messages (and locations for Telegram and Facebook) and sending text messages.
+Currently it can only handle incoming text messages (and locations for Telegram and Facebook) and sending text messages and images.
 
 Other functions:  
 
-`bothelper.Bot.sendText(msg, text)`  
-Send a text message. Supports [emojis by ascii name](https://github.com/carpedm20/emoji#example) and respects the messaging limits of the platforms.
+`bothelper.Bot.sendText(msg, text, buttons=None)`  
+Send a text message. Supports [emojis by ascii name](https://github.com/carpedm20/emoji#example) and respects the messaging limits of the platforms.  
 
 `bothelper.Bot.sendLink(msg, url)`  
-Send a link. 
+Send a link.  
 
 `bothelper.Bot.sendPhoto(msg, url)`  
-Send a photo via its url.
+Send a photo via its url.  
 
-`bothelper.Bot.sendQuestion(msg, text, responses, onOtherResponse)`  
-Send a text message with predifined reply buttons (a.k.a "quick reply", "InlineKeyboardButton"). 
+`bothelper.Bot.sendQuestion(msg, text, buttons=None)`  
+Send a text message that expects an inmediate reply (optionally with predifined reply buttons)  
+
+`bothelper.Bot.sendQuestionWithReplies(self, msg, text, responses=None, onOtherResponse=None)`  
+Send a text message with predifined reply buttons (a.k.a "quick reply", "InlineKeyboardButton").  
 
 `bothelper.Bot.user(msg)`  
 Store and retrieve data specific to one user, similiar to sessions in PHP.  
@@ -101,6 +104,7 @@ if __name__ == '__main__':
 
 Requirements
 ------------
+ * A web server that can host a flask server (e.g. [Heroku](https://www.heroku.com/) with gunicorn) (Kik, Telegram and Facebook require a public server for the webhook)
  * [Flask](https://pypi.python.org/pypi/Flask)
  * [emoji](https://pypi.python.org/pypi/emoji/0.4.5)
  * [flag](https://github.com/cvzi/flag)

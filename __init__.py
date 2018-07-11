@@ -111,7 +111,7 @@ class ServerHelper:
         return emoji.demojize(flag.dflagize(text))
         
         
-    def _sendText(self, msg, text, buttons=None):
+    def _sendText(self, msg, text, buttons=None, is_question=False):
         
         # Check length of message
         if "maxMessageLength" in msg["_bot"].specifications and len(text) > msg["_bot"].specifications["maxMessageLength"]:
@@ -144,14 +144,16 @@ class ServerHelper:
                     msg["_bot"].sendText(msg, text)
                 
                 text = rest
-        
-        return msg["_bot"].sendText(msg, text, buttons)
+                
+        if is_question and getattr(msg["_bot"], "sendQuestion", None) is not None:
+            return msg["_bot"].sendQuestion(msg, text, buttons)
+        else:
+            return msg["_bot"].sendText(msg, text, buttons)
             
     def _sendLink(self, msg, url, buttons=None, text=""):
         return msg["_bot"].sendLink(msg, url, buttons, text)
             
     def _sendPhoto(self, msg, url, buttons=None):
-    
         return msg["_bot"].sendPhoto(msg, url, buttons)
            
 
@@ -417,23 +419,35 @@ class Bot:
         }
         
     def sendText(self, msg, text, buttons=None):
+        """
+        Send a text message with quick reply buttons (or commands depending on the bot type)
+        """
         if isinstance(msg, User):
             msg = msg.msg()
         return self.serv._sendText(msg, text, buttons)
         
     def sendLink(self, msg, url, buttons=None, text=""):
+        """
+        Sends link to a website and optionally a description text
+        """
         if isinstance(msg, User):
             msg = msg.msg()
         return self.serv._sendLink(msg, url, buttons, text)
         
         
     def sendPhoto(self, msg, url, buttons=None):
+        """
+        Sends a photo by its url
+        """
         if isinstance(msg, User):
             msg = msg.msg()
         return self.serv._sendPhoto(msg, url, buttons)
         
         
-    def sendQuestion(self, msg, text, responses=None, onOtherResponse=None, onOtherResponseReturn=None):
+    def sendQuestionWithReplies(self, msg, text, responses=None, onOtherResponse=None, onOtherResponseReturn=None):
+        """
+        Sends a text message and expects a reply with predefined replies and actions.
+        """
         if isinstance(msg, User):
             msg = msg.msg()
         user = self.user(msg)
@@ -443,9 +457,22 @@ class Bot:
         
         user.rememberResponses(responses, onOtherResponse, onOtherResponseReturn)
     
-        return self.serv._sendText(msg, text, buttons=responses)
+        return self.serv._sendText(msg, text, buttons=responses, is_question=True)
+        
+    def sendQuestion(self, msg, text, buttons=None):
+        """
+        Sends a text message and expects a reply
+        """
+        if isinstance(msg, User):
+            msg = msg.msg()
+        return self.serv._sendText(msg, text, buttons=buttons, is_question=True)
+        
     
     def sendTextWithButtons(self, msg, text, buttons):
+        """
+        Send a text message with quick reply buttons (or commands depending on the bot type)
+        Same as sendText()
+        """
         if isinstance(msg, User):
             msg = msg.msg()
         return self.serv._sendText(msg, text, buttons=buttons)
@@ -513,9 +540,7 @@ class User:
         root["buttons"] = {}
         
     def clearResponses(self):
-        root = self.data if self.conversation is None else self.conversation
-        
-        root["buttons"] = {}
+        self.__clearResponses()
         
         
     def storeValue(self, key, value):
@@ -580,7 +605,7 @@ class User:
         return ret
         
     def getOnOtherResponse(self):
-        return self.getButton(self.onOtherResponseNAME, clear=False)
+        return self.getButton(self.onOtherResponseNAME, clear=True)
         
     def getResponse(self, query, clear=True):
         root = self.data if self.conversation is None else self.conversation
