@@ -11,8 +11,6 @@ import threading
 import emoji
 import flask
 
-# custom
-from . import flag
 
 # debug
 from pprint import pprint
@@ -105,10 +103,10 @@ class ServerHelper:
         return func
         
     def _emojize(self, text):
-        return flag.flagize(emoji.emojize(text))
+        return emoji.emojize(text, use_aliases=True)
         
     def _demojize(self, text):
-        return emoji.demojize(flag.dflagize(text))
+        return emoji.demojize(text)
         
         
     def _sendText(self, msg, text, buttons=None, is_question=False):

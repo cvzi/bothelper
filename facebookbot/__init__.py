@@ -102,7 +102,7 @@ class FacebookBot:
     def __onPost(self):
         """
         Handle incoming messages to the bot. All requests are authenticated using the signature in
-        the 'X-Kik-Signature' header.
+        the 'X-Hub-Signature' header.
         :return: flask.Response
         """
         # endpoint for processing incoming messaging events
