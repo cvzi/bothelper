@@ -1,0 +1,11 @@
+﻿flask
+emoji>=0.5.1
+emoji-country-flag>=1.0.0
+# Facebook:
+#requests
+# Discord:
+#discord.py
+# Kik:
+#kik
+# Telegram:
+#telepot

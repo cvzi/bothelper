@@ -106,8 +106,8 @@ Requirements
 ------------
  * A web server that can host a flask server (e.g. [Heroku](https://www.heroku.com/) with gunicorn) (Kik, Telegram and Facebook require a public server for the webhook)
  * [Flask](https://pypi.python.org/pypi/Flask)
- * [emoji](https://pypi.python.org/pypi/emoji/0.4.5)
- * [flag](https://github.com/cvzi/flag)
+ * [emoji](https://pypi.python.org/pypi/emoji/)
+ * [flag](https://pypi.org/project/emoji-country-flag/)
  * [telepot](https://pypi.python.org/pypi/telepot) (only if you want to use the Telegram bot)
  * [kik](https://pypi.python.org/pypi/kik) (only if you want to use the Kik bot)
  * [discord.py](https://pypi.org/project/discord.py/) (only if you want to use the Discord bot)
