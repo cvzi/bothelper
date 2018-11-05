@@ -73,7 +73,7 @@ class TelegramBot:
 
 
     def __handleMessage(self, message):
-        content_type, chat_type, chat_id = telepot.glance(message)
+        content_type, _, _ = telepot.glance(message)
 
         message["_bot"] = self
         message["_userId"] = self.userIdFromFrom(message["from"]["id"])

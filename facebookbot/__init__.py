@@ -111,7 +111,8 @@ class FacebookBot:
                 print("__onPost: Validation failed!")
                 return "Signature mismatch",403
             data = flask.request.get_json()
-            assert data != None
+            if data is None:
+                raise RuntimeError("Empty json data")
         except:
             return "Corrupt json data", 400
 
@@ -295,7 +296,8 @@ class FacebookBot:
 
         ret = json.loads(r.text)
 
-        assert ret["result"] == "success"
+        if ret["result"] != "success":
+            raise RuntimeError("Result is not 'success' but %r" % ret["result"])
 
 
     def setGetStartedButton(self, payload="/start"):
@@ -312,4 +314,5 @@ class FacebookBot:
 
         ret = json.loads(r.text)
 
-        assert ret["result"] == "success"
+        if ret["result"] != "success":
+            raise RuntimeError("Result is not 'success' but %r" % ret["result"])

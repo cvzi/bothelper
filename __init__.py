@@ -439,7 +439,8 @@ class Bot:
         self.user(msg).endConversation()
 
 
-    def createEmptyMessage(self, fromMsg, toUserId):
+    @staticmethod
+    def createEmptyMessage(fromMsg, toUserId):
         return {
             "_bot" : fromMsg["_bot"],
             "_responseMessages" : [],
@@ -515,7 +516,8 @@ class Bot:
                 pickle.dump(self.users, fs)
 
 
-    def runInThread(self, fun, *args, **kwargs):
+    @staticmethod
+    def runInThread(fun, *args, **kwargs):
         try:
             import asyncio
         except ModuleNotFoundError:
@@ -658,7 +660,7 @@ class User:
         query = query.lower()
 
         def check():
-            for key, button in root["buttons"].items():
+            for button in root["buttons"].values():
                 if button[0].lower() == query: #compare strings
                     return button[1], button[0], button[0].lower()
                 if len(button) > 2:

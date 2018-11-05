@@ -40,7 +40,9 @@ class HtmlBot:
 
         try:
             data = flask.request.get_json()
-            assert data != None
+            if data is None:
+                raise RuntimeError("Empty json data")
+            
         except:
             return "Corrupt json data", 400
 
@@ -136,10 +138,9 @@ class HtmlBot:
                 }
             )
 
+
     def sendPhoto(self, msg, url, buttons=None):
-        b = None
-        if buttons:
-            b = [(button[0], button[1] if isinstance(button[1], str) else button[0]) for button in buttons]
+        b = self.__formatButtons(buttons)
 
         msg["_responseMessages"].append({
             "to" : msg["_userId"],
@@ -149,9 +150,7 @@ class HtmlBot:
         )
 
     def sendLink(self, msg, url, buttons=None, text=""):
-        b = None
-        if buttons:
-            b = [(button[0], button[1] if isinstance(button[1], str) else button[0]) for button in buttons]
+        b = self.__formatButtons(buttons)
 
         if text:
             text = "<br>" + html.escape(self.serv._emojize(text))
