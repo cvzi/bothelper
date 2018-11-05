@@ -1,4 +1,4 @@
-engines:
+plugins:
   pep8:
     enabled: true
     checks:
@@ -6,7 +6,6 @@ engines:
         enabled: false
   bandit:
     enabled: true
-plugins:
   radon:
     enabled: true
   sonar-python:
