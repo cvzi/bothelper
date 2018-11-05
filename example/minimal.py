@@ -8,27 +8,31 @@ import bothelper
 
 serv = bothelper.ServerHelper()
 
+
 class MyMinmalBot(bothelper.Bot):
     startMessageText = """Welcome!"""
 
     # Builtin event: called if no other function matches
     def onOtherResponse(self, msg):
-        self.sendText(msg, "Ok. not sure what to do with it. I don't know this command")
+        self.sendText(
+            msg, "Ok. not sure what to do with it. I don't know this command")
 
     @serv.textLike("/start")
     def commandStart(self, msg)
-        # Show the welcome message
-        self.sendText(msg, self.startMessageText)
+    # Show the welcome message
+    self.sendText(msg, self.startMessageText)
 
     @serv.textStartsWith("Hi")
     @serv.textStartsWith("Hey")
     @serv.textStartsWith("Hello")
     def hi(self, msg):
         self.sendText(msg, "Hi :winking_face:")
-        self.sendQuestion(msg, "Do you prefer :cat: or  :dog:?", responses=[("Cats", self.showCat), ("Dogs", self.showDog)])
+        self.sendQuestion(msg, "Do you prefer :cat: or  :dog:?", responses=[
+                          ("Cats", self.showCat), ("Dogs", self.showDog)])
 
     def showCat(self, msg):
-        self.sendText(msg, ":musical_note: Soft kitty, warm kitty, little ball of fur, ...")
+        self.sendText(
+            msg, ":musical_note: Soft kitty, warm kitty, little ball of fur, ...")
 
     def showDog(self, msg):
         self.sendText(msg, "Who let the dogs out?")
@@ -38,7 +42,9 @@ class MyMinmalBot(bothelper.Bot):
     @serv.textLike("/about")
     @serv.textLike("about")
     def showHelp(self, msg):
-        self.sendText(msg, "This is a minimal BotHelper Example. More at: https://github.com/cvzi/bothelper")
+        self.sendText(
+            msg,
+            "This is a minimal BotHelper Example. More at: https://github.com/cvzi/bothelper")
 
 
 if __name__ == '__main__':

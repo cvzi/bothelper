@@ -3,11 +3,12 @@ import subprocess
 import urllib.request
 import re
 
+
 def getUrl():
     # Return the current ngrok url
     with urllib.request.urlopen("http://localhost:4040/api/tunnels") as response:
         text = str(response.read())
-    m = re.search(r"https://\w+\.ngrok\.io",text)
+    m = re.search(r"https://\w+\.ngrok\.io", text)
     url = m.group(0)
 
     return url

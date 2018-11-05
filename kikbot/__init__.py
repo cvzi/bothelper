@@ -8,40 +8,47 @@ import time
 
 from pprint import pprint
 
+
 class KikBot:
 
     specifications = {
-        "maxMessageLength" : 1000,  # TODO Just a guess. What's the real limit?
-        "maxMessagesPerUser" : 5,  # https://dev.kik.com/#/docs/messaging#sending-messages
-        "maxMessagesPerBatch" : 25,  # https://dev.kik.com/#/docs/messaging#rate-limits
-        "maxBroadcastsPerBatch" : 100,  # https://dev.kik.com/#/docs/messaging#rate-limits
-        "waitBetweenBatches" : 2,
-        "restrictedChars" : {
-            "\x84" : "\"",
-            }
-
+        "maxMessageLength": 1000,  # TODO Just a guess. What's the real limit?
+        "maxMessagesPerUser": 5,  # https://dev.kik.com/#/docs/messaging#sending-messages
+        "maxMessagesPerBatch": 25,  # https://dev.kik.com/#/docs/messaging#rate-limits
+        "maxBroadcastsPerBatch": 100,  # https://dev.kik.com/#/docs/messaging#rate-limits
+        "waitBetweenBatches": 2,
+        "restrictedChars": {
+            "\x84": "\"",
         }
 
+    }
 
     def __init__(self, serv, flaskserver, route, name, apikey, webhook_host):
         """
         It is suggested to use a secret :param route: to ensure that nobody can send malicious requests.
         """
-        endpoint = "%s.%s@%s" % (self, self.__incoming.__name__, route) # Unique endpoint name
+        endpoint = "%s.%s@%s" % (self,
+                                 self.__incoming.__name__,
+                                 route)  # Unique endpoint name
 
-        flaskserver.route(route, methods=["POST"], endpoint=endpoint)(self.__incoming)
+        flaskserver.route(
+            route,
+            methods=["POST"],
+            endpoint=endpoint)(
+            self.__incoming)
 
         self.serv = serv
 
         self.kik_api = kik.KikApi(name, apikey)
-        self.kik_api.set_configuration(kik.Configuration(webhook=webhook_host+route))
-
+        self.kik_api.set_configuration(
+            kik.Configuration(
+                webhook=webhook_host + route))
 
     def _sanitize(self, text):
         for key in self.specifications["restrictedChars"]:
-            text = text.replace(key, self.specifications["restrictedChars"][key])
+            text = text.replace(
+                key, self.specifications["restrictedChars"][key])
         return text
-
 
     def __incoming(self):
         """
@@ -50,9 +57,11 @@ class KikBot:
         :return: flask.Response
         """
         # verify that this is a valid request
-        # TODO verify timestamp as suggested at: https://dev.kik.com/#/docs/messaging#api-authentication-with-webhook
+        # TODO verify timestamp as suggested at:
+        # https://dev.kik.com/#/docs/messaging#api-authentication-with-webhook
         if not self.kik_api.verify_signature(
-                flask.request.headers.get("X-Kik-Signature"), flask.request.get_data()):
+                flask.request.headers.get("X-Kik-Signature"),
+                flask.request.get_data()):
             return "Verification token mismatch", 403
 
         messages = flask.request.json["messages"]
@@ -72,7 +81,6 @@ class KikBot:
 
         return "Ok", 200
 
-
     def __sendMessages(self, response_messages):
         if not response_messages:
             return
@@ -80,14 +88,17 @@ class KikBot:
         if len(response_messages) > self.specifications["maxMessagesPerUser"]:
             remaining = response_messages
             while len(remaining) > 0:
-                # Respect limits: https://dev.kik.com/#/docs/messaging#sending-messages and https://dev.kik.com/#/docs/messaging#rate-limits
+                # Respect limits:
+                # https://dev.kik.com/#/docs/messaging#sending-messages and
+                # https://dev.kik.com/#/docs/messaging#rate-limits
                 current_batch = []  # Collect messages to send now, respecting both limits
                 next_batch = []  # These messages should be sent in next batch, before the remaining message
                 to_users = {}  # Count messages per user in batch
                 i = 0  # Count total messages in batch
-                N = self.specifications["maxMessagesPerBatch"] # Max messages per Batch
+                # Max messages per Batch
+                N = self.specifications["maxMessagesPerBatch"]
                 for message in remaining[0:N]:
-                    if not message.to in to_users:
+                    if message.to not in to_users:
                         to_users[message.to] = 0
 
                     if to_users[message.to] < self.specifications["maxMessagesPerUser"] and i < N:
@@ -116,7 +127,6 @@ class KikBot:
         else:
             self.kik_api.send_messages(response_messages)
 
-
     def __sendBroadcasts(self, response_messages):
         if not response_messages:
             return
@@ -124,14 +134,17 @@ class KikBot:
         if len(response_messages) > self.specifications["maxMessagesPerUser"]:
             remaining = response_messages
             while len(remaining) > 0:
-                # Respect limits: https://dev.kik.com/#/docs/messaging#sending-messages and https://dev.kik.com/#/docs/messaging#rate-limits
+                # Respect limits:
+                # https://dev.kik.com/#/docs/messaging#sending-messages and
+                # https://dev.kik.com/#/docs/messaging#rate-limits
                 current_batch = []  # Collect messages to send now, respecting both limits
                 next_batch = []  # These messages should be sent in next batch, before the remaining message
                 to_users = {}  # Count messages per user in batch
                 i = 0  # Count total messages in batch
-                N = self.specifications["maxBroadcastsPerBatch"]  # Max messages per Batch
+                # Max messages per Batch
+                N = self.specifications["maxBroadcastsPerBatch"]
                 for message in remaining[0:N]:
-                    if not message.to in to_users:
+                    if message.to not in to_users:
                         to_users[message.to] = 0
 
                     if to_users[message.to] < self.specifications["maxMessagesPerUser"] and i < N:
@@ -160,14 +173,13 @@ class KikBot:
         else:
             self.kik_api.send_broadcast(response_messages)
 
-
     def __handleMessage(self, message):
         message["_bot"] = self
         message["_userId"] = message["from"]
         message["_responseMessages"] = []
         message["_responseSent"] = False
 
-        if "type" in message  and message["type"] != "text":
+        if "type" in message and message["type"] != "text":
             pprint(message)
 
         if "metadata" in message and message["metadata"] and "_type" in message["metadata"]:
@@ -178,8 +190,9 @@ class KikBot:
                 message["text"] = message["metadata"]["_button"]
                 self.serv._handleFriendPicker(message)
             else:
-                raise Exception("Unkown _type in metadata: _type=%s" % str(message["metadata"]["_type"]))
-
+                raise Exception(
+                    "Unkown _type in metadata: _type=%s" % str(
+                        message["metadata"]["_type"]))
 
         elif message["type"] == "start-chatting":
             if "body" in message and message["body"]:
@@ -219,11 +232,15 @@ class KikBot:
 
         message["_responseSent"] = True
 
-        if len(message["_responseMessages"]) > self.specifications["maxMessagesPerUser"]:
+        if len(message["_responseMessages"]
+               ) > self.specifications["maxMessagesPerUser"]:
 
-            batch, remaining = message["_responseMessages"][0 : self.specifications["maxMessagesPerUser"] ] , message["_responseMessages"][self.specifications["maxMessagesPerUser"] : ]
+            batch, remaining = message["_responseMessages"][0:self.specifications["maxMessagesPerUser"]
+                                                            ], message["_responseMessages"][self.specifications["maxMessagesPerUser"]:]
 
-            t = threading.Thread(target=self.kik_api.send_messages, args=(remaining, 5))
+            t = threading.Thread(
+                target=self.kik_api.send_messages, args=(
+                    remaining, 5))
             t.daemon = True
             t.start()
 
@@ -231,28 +248,36 @@ class KikBot:
 
         return message["_responseMessages"]
 
-
     def _formatButtons(self, buttons):
         keyboards = None
         if buttons is not None:
             responses = []
             for button in buttons:
                 if button[1] == "friend-picker":
-                    response = kik.messages.FriendPickerResponse(self.serv._emojize(button[0]))
-                    response.metadata = {"_type": "FriendPickerResponse", "_button" : button[1]}
+                    response = kik.messages.FriendPickerResponse(
+                        self.serv._emojize(button[0]))
+                    response.metadata = {
+                        "_type": "FriendPickerResponse",
+                        "_button": button[1]}
                     responses.append(response)
                 else:
-                    response = kik.messages.TextResponse(self.serv._emojize(button[0]))
-                    response.metadata = {"_type": "SuggestedTextResponse", "_button" : button[1] if isinstance(button[1], str) else button[0]}
+                    response = kik.messages.TextResponse(
+                        self.serv._emojize(button[0]))
+                    response.metadata = {
+                        "_type": "SuggestedTextResponse",
+                        "_button": button[1] if isinstance(
+                            button[1],
+                            str) else button[0]}
                     responses.append(response)
-            keyboards = [kik.messages.SuggestedResponseKeyboard(responses=responses)]
+            keyboards = [
+                kik.messages.SuggestedResponseKeyboard(
+                    responses=responses)]
         return keyboards
-
 
     def sendText(self, msg, text, buttons=None):
         keyboards = self._formatButtons(buttons)
 
-        if not "_responseMessages" in msg:
+        if "_responseMessages" not in msg:
             msg["_responseMessages"] = []
 
         msg["_responseMessages"].append(kik.messages.TextMessage(
@@ -260,13 +285,13 @@ class KikBot:
             chat_id=msg["chatId"] if "chatId" in msg else None,
             body=self._sanitize(self.serv._emojize(text)),
             keyboards=keyboards
-            )
+        )
         )
 
         if msg["_responseSent"]:
-            # The original message was already sent back, so we need to send the reply separately
+            # The original message was already sent back, so we need to send
+            # the reply separately
             self.__sendMessages(msg["_responseMessages"])
-
 
     def broadcastText(self, broadcasts, batch=None):
         """
@@ -284,16 +309,15 @@ class KikBot:
                 chat_id=chatId,
                 body=self._sanitize(self.serv._emojize(text)),
                 keyboards=keyboards
-                )
+            )
             )
 
         self.__sendBroadcasts(batch)
 
-
     def sendLink(self, msg, url, buttons=None, text=""):
         keyboards = self._formatButtons(buttons)
 
-        if not "_responseMessages" in msg:
+        if "_responseMessages" not in msg:
             msg["_responseMessages"] = []
 
         if text:
@@ -303,7 +327,7 @@ class KikBot:
                 url=url,
                 text=self.serv._emojize(text),
                 keyboards=keyboards
-                )
+            )
             )
         else:
             msg["_responseMessages"].append(kik.messages.LinkMessage(
@@ -311,19 +335,18 @@ class KikBot:
                 chat_id=msg["chatId"],
                 url=url,
                 keyboards=keyboards
-                )
+            )
             )
 
-
         if msg["_responseSent"]:
-            # The original message was already sent back, so we need send the reply separately
+            # The original message was already sent back, so we need send the
+            # reply separately
             self.__sendMessages(msg["_responseMessages"])
-
 
     def sendPhoto(self, msg, url, buttons=None):
         keyboards = self._formatButtons(buttons)
 
-        if not "_responseMessages" in msg:
+        if "_responseMessages" not in msg:
             msg["_responseMessages"] = []
 
         msg["_responseMessages"].append(kik.messages.PictureMessage(
@@ -331,9 +354,10 @@ class KikBot:
             chat_id=msg["chatId"],
             pic_url=url,
             keyboards=keyboards
-            )
+        )
         )
 
         if msg["_responseSent"]:
-            # The original message was already sent back, so we need send the reply separately
+            # The original message was already sent back, so we need send the
+            # reply separately
             self.__sendMessages(msg["_responseMessages"])

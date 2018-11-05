@@ -69,78 +69,69 @@ class VagueReply:
     def string(s):
         return s
 
-
     def __init__(self):
         self.data = []
 
-
     def new(self, definitive, vagues=None):
-
         if not vagues:
             vagues = definitive
             definitive = definitive[0]
 
         c = VagueReply.VagueContainer(definitive, vagues)
         self.data.append(c)
-
-
         return c
 
 
 class ServerHelper:
-
     def __init__(self):
         self.commands = {}
         self.bot = None
-
         self.vagueReply = VagueReply()
-
 
     def _registerBot(self, bot):
         self.bot = bot
 
-
     def __registerCommand(self, func, condition_wrapper):
         if func.__name__ in self.commands:
-            self.commands[func.__name__]["conditions"].append(condition_wrapper)
+            self.commands[func.__name__]["conditions"].append(
+                condition_wrapper)
         else:
-            self.commands[func.__name__] = {"conditions": [condition_wrapper], "function": func}
+            self.commands[func.__name__] = {
+                "conditions": [condition_wrapper], "function": func}
         return func
-
 
     @staticmethod
     def _emojize(text):
         return emoji.emojize(text, use_aliases=True)
 
-
     @staticmethod
     def _demojize(text):
         return emoji.demojize(text)
 
-
     @staticmethod
     def _sendText(msg, text, buttons=None, is_question=False):
-
         # Check length of message
-        if "maxMessageLength" in msg["_bot"].specifications and len(text) > msg["_bot"].specifications["maxMessageLength"]:
+        if "maxMessageLength" in msg["_bot"].specifications and len(
+                text) > msg["_bot"].specifications["maxMessageLength"]:
             N = msg["_bot"].specifications["maxMessageLength"]
 
             re_newline = re.compile(r"\n|$", flags=re.MULTILINE)
-            re_whitespace = re.compile("\s+", flags=re.MULTILINE)
-            re_wordend = re.compile("\b\s*", flags=re.MULTILINE)
+            re_whitespace = re.compile(r"\s+", flags=re.MULTILINE)
+            re_wordend = re.compile(r"\b\s*", flags=re.MULTILINE)
 
             # Split long message up
             while len(text) > N:
                 # Try to split at newline
-                m = re_newline.search(text, pos=N-50)
-                if not m: # try to split at whitespace
-                    m = re_whitespace.search(text, pos=N-50)
-                    if not m: # try to split at wordend
-                        m = re_wordend.search(text, pos=N-50)
+                m = re_newline.search(text, pos=N - 50)
+                if not m:  # try to split at whitespace
+                    m = re_whitespace.search(text, pos=N - 50)
+                    if not m:  # try to split at wordend
+                        m = re_wordend.search(text, pos=N - 50)
 
                 if not m or m.end() == len(text):
                     # split anywhere
-                    text, rest = text[0:N-5] + "...", "..." + text[N-5:].strip()
+                    text, rest = text[0:N - 5] + \
+                        "...", "..." + text[N - 5:].strip()
                 else:
                     # split at match
                     text, rest = text[0:m.start()], text[m.end():].strip()
@@ -153,25 +144,24 @@ class ServerHelper:
 
                 text = rest
 
-        if is_question and getattr(msg["_bot"], "sendQuestion", None) is not None:
+        if is_question and getattr(
+            msg["_bot"],
+            "sendQuestion",
+                None) is not None:
             return msg["_bot"].sendQuestion(msg, text, buttons)
         else:
             return msg["_bot"].sendText(msg, text, buttons)
-
 
     @staticmethod
     def _sendLink(msg, url, buttons=None, text=""):
         return msg["_bot"].sendLink(msg, url, buttons, text)
 
-
     @staticmethod
     def _sendPhoto(msg, url, buttons=None):
         return msg["_bot"].sendPhoto(msg, url, buttons)
 
-
     def _handleTextMessage(self, msg):
         user = self.bot.user(msg)
-
 
         msg["text_nice"] = self._demojize(msg["text"].strip())
         msg["text_nice_lower"] = msg["text_nice"].lower()
@@ -180,22 +170,18 @@ class ServerHelper:
         m = user.getResponse(msg["text_nice_lower"])
         if m is not None:
             function = m[0]
-
             function(msg)
-
             return True
 
         # Fallback to question onOtherResponse
         onOtherResponse = user.getOnOtherResponse()
         if onOtherResponse is not None:
             function, lastStage = onOtherResponse[1]
-
             if len(inspect.signature(function).parameters) == 2:
                 function(msg, lastStage)
             else:
                 function(msg)
             return True
-
 
         # Match any other
         for commandName in self.commands:
@@ -209,9 +195,9 @@ class ServerHelper:
             self.bot.onOtherResponse(msg)
             return True
 
-        print("No handler found for text message: %s" % msg["text_nice"].encode('unicode-escape').decode('ascii'))
+        print("No handler found for text message: %s" %
+              msg["text_nice"].encode('unicode-escape').decode('ascii'))
         return False
-
 
     def _handleFriendPicker(self, msg):
         if hasattr(self.bot, 'onFriendPicker'):
@@ -219,94 +205,70 @@ class ServerHelper:
             return True
         return False
 
-
     def _handleLocation(self, msg):
         if hasattr(self.bot, 'onLocation'):
             self.bot.onLocation(msg)
             return True
         return False
 
-
     def _handleButtonClick(self, msg):
         user = self.bot.user(msg)
-
-
         button = user.getButton(msg["text"])
-
         if button is None:
             return self._handleTextMessage(msg)
-
         if isinstance(button[1], str):
             msg["text"] = button[1]
             msg["text_nice"] = self._demojize(msg["text"].strip())
             msg["text_nice_lower"] = msg["text_nice"].lower()
-
             return self._handleTextMessage(msg)
-
         else:
             msg["text_nice"] = self._demojize(msg["text"].strip())
             msg["text_nice_lower"] = msg["text_nice"].lower()
-
             function = button[1]
-
             function(msg)
-
         return True
-
 
     def all(self, *args):
         def wrapper(func):
             org_func_name = func.__name__
-            func.__name__ = "fake_"+org_func_name
-
+            func.__name__ = "fake_" + org_func_name
             for arg in args:
                 arg(func)
-
             conditions = self.commands.pop(func.__name__)["conditions"]
             func.__name__ = org_func_name
 
-
             def __condition(self, msg):
                 return all([condition(msg) for condition in conditions])
-
 
             def condition_wrapper(msg):
                 return __condition(self, msg)
 
             return self.__registerCommand(func, condition_wrapper)
-
         return wrapper
-
 
     def textLike(self, text):
         def __condition(self, msg):
             return text.strip().lower() == msg["text_nice_lower"]
 
-
         def condition_wrapper(msg):
             return __condition(self, msg)
-
 
         def register_command(func):
             return self.__registerCommand(func, condition_wrapper)
 
         return register_command
-
 
     def textStartsWith(self, text):
         def __condition(self, msg):
             return msg["text_nice_lower"].startswith(text.strip().lower())
 
-
         def condition_wrapper(msg):
             return __condition(self, msg)
-
 
         def register_command(func):
             return self.__registerCommand(func, condition_wrapper)
 
         return register_command
-
 
     def textRegexMatch(self, rawpattern, flags=re.IGNORECASE):
         regex_pattern = re.compile(rawpattern, flags)
@@ -322,15 +284,12 @@ class ServerHelper:
 
         return register_command
 
-
     def userIdEquals(self, userId):
         def __condition(self, msg):
             return userId == msg["_userId"]
 
-
         def condition_wrapper(msg):
             return __condition(self, msg)
-
 
         def register_command(func):
             return self.__registerCommand(func, condition_wrapper)
@@ -339,7 +298,6 @@ class ServerHelper:
 
 
 class Bot:
-
     def __init__(self, serverHelper, title="Bot", userFile=None):
         self.serv = serverHelper
         self.serv._registerBot(self)
@@ -361,20 +319,16 @@ class Bot:
 
                 self.users = pickle.load(fs)
 
-
     def addPermanentStorage(self, storage):
         self.userStorage = storage
 
-
     def getPermanentStorage(self):
         return self.userStorage
-
 
     def getBotByName(self, name):
         for bot in self.bots:
             if type(bot).__name__ == name:
                 return bot
-
 
     def getFlask(self):
         if self.__flaskServer is None:
@@ -382,10 +336,9 @@ class Bot:
 
         return self.__flaskServer
 
-
     def __runFlask(self, host, port):
-        return self.__flaskServer.run(port=port, host=host, debug=False, threaded=True)
-
+        return self.__flaskServer.run(
+            port=port, host=host, debug=False, threaded=True)
 
     def addBot(self, bottype, *args, **kwargs):
         bot = bottype(self.serv, *args, **kwargs)
@@ -393,13 +346,11 @@ class Bot:
         print("Added %s" % str(bot))
         return bot
 
-
     def addFlaskBot(self, bottype, *args, **kwargs):
         bot = bottype(self.serv, self.getFlask(), *args, **kwargs)
         self.bots.append(bot)
         print("Added %s" % str(bot))
         return bot
-
 
     def run(self, runFlask=True, host='127.0.0.1', port=8080):
         """Starts all bots.
@@ -407,12 +358,10 @@ class Bot:
         This call will block the current thread forever.
         If False, it will just return the Flask and you may run it later.
         You should not use Flask's server for production/deployment"""
-
-        print("Starting "+self.title+"...")
+        print("Starting " + self.title + "...")
         for bot in self.bots:
             if hasattr(bot, "run"):
                 bot.run()
-
         if self.__flaskServer is not None:
             if runFlask:
                 print("Starting Flask...")
@@ -420,34 +369,33 @@ class Bot:
 
         return self.__flaskServer
 
-
     def user(self, msg):
         userId = msg["_userId"]
-        if not userId in self.users:
-            self.users[userId] = User(userId=userId, lastMsg=msg, storage=self.userStorage, bot=msg["_bot"])
+        if userId not in self.users:
+            self.users[userId] = User(
+                userId=userId,
+                lastMsg=msg,
+                storage=self.userStorage,
+                bot=msg["_bot"])
 
         self.users[userId].msg(msg)
         return self.users[userId]
-
 
     def startConversation(self, msg, forceExitCommand="/cancel"):
         user = self.user(msg)
         user.startConversation(forceExitCommand)
 
-
     def endConversation(self, msg):
         self.user(msg).endConversation()
-
 
     @staticmethod
     def createEmptyMessage(fromMsg, toUserId):
         return {
-            "_bot" : fromMsg["_bot"],
-            "_responseMessages" : [],
-            "_responseSent" : True,
-            "_userId" : toUserId
+            "_bot": fromMsg["_bot"],
+            "_responseMessages": [],
+            "_responseSent": True,
+            "_userId": toUserId
         }
-
 
     def sendText(self, msg, text, buttons=None):
         """
@@ -457,7 +405,6 @@ class Bot:
             msg = msg.msg()
         return self.serv._sendText(msg, text, buttons)
 
-
     def sendLink(self, msg, url, buttons=None, text=""):
         """
         Sends link to a website and optionally a description text
@@ -465,7 +412,6 @@ class Bot:
         if isinstance(msg, User):
             msg = msg.msg()
         return self.serv._sendLink(msg, url, buttons, text)
-
 
     def sendPhoto(self, msg, url, buttons=None):
         """
@@ -475,21 +421,27 @@ class Bot:
             msg = msg.msg()
         return self.serv._sendPhoto(msg, url, buttons)
 
-
-    def sendQuestionWithReplies(self, msg, text, responses=None, onOtherResponse=None, onOtherResponseReturn=None):
+    def sendQuestionWithReplies(
+            self,
+            msg,
+            text,
+            responses=None,
+            onOtherResponse=None,
+            onOtherResponseReturn=None):
         """
         Sends a text message and expects a reply with predefined replies and actions.
         """
         if isinstance(msg, User):
             msg = msg.msg()
         user = self.user(msg)
-
         if responses is None:
             responses = []
-
-        user.rememberResponses(responses, onOtherResponse, onOtherResponseReturn)
-
-        return self.serv._sendText(msg, text, buttons=responses, is_question=True)
+        user.rememberResponses(
+            responses,
+            onOtherResponse,
+            onOtherResponseReturn)
+        return self.serv._sendText(
+            msg, text, buttons=responses, is_question=True)
 
     def sendQuestion(self, msg, text, buttons=None):
         """
@@ -497,8 +449,8 @@ class Bot:
         """
         if isinstance(msg, User):
             msg = msg.msg()
-        return self.serv._sendText(msg, text, buttons=buttons, is_question=True)
-
+        return self.serv._sendText(
+            msg, text, buttons=buttons, is_question=True)
 
     def sendTextWithButtons(self, msg, text, buttons):
         """
@@ -509,12 +461,10 @@ class Bot:
             msg = msg.msg()
         return self.serv._sendText(msg, text, buttons=buttons)
 
-
     def saveUserFile(self):
         if self.userFile is not None:
             with open(self.userFile, "wb") as fs:
                 pickle.dump(self.users, fs)
-
 
     @staticmethod
     def runInThread(fun, *args, **kwargs):
@@ -537,11 +487,7 @@ class Bot:
         t.start()
 
 
-
-
-
 class User:
-
     def __init__(self, userId, lastMsg=None, storage=None, bot=None):
         self.__lastMsg = lastMsg
         self.userId = userId
@@ -554,37 +500,29 @@ class User:
         self.conversation = None
         self.onOtherResponseNAME = "__onOtherResponse__123"
 
-
     def msg(self, msg=None):
         if msg is None:
             return self.__lastMsg
-
         self.__lastMsg = msg
         return msg
-
 
     def startConversation(self, forceExitCommand):
         self.conversation = {}
 
-
     def endConversation(self):
         self.conversation = None
 
-
     def __clearResponses(self):
         root = self.data if self.conversation is None else self.conversation
-
         root["buttons"] = {}
 
     def clearResponses(self):
         self.__clearResponses()
 
-
     def storeValue(self, key, value):
         self.userdata[key] = value
         if self.storage is not None:
             self.storage.store(self.bot, self.userId, key, value)
-
 
     def retrieveValue(self, key, default=None):
         if key in self.userdata:
@@ -592,47 +530,50 @@ class User:
         else:
             return default
 
-
     def clearValues(self):
         self.userdata = {}
         if self.storage is not None:
             self.storage.clear(self.bot, self.userId)
 
-
-    def rememeberOnOtherResponse(self, onOtherResponse, onOtherResponseReturn=None):
-        self.rememberResponse((self.onOtherResponseNAME, (onOtherResponse, onOtherResponseReturn)))
-
+    def rememeberOnOtherResponse(
+            self,
+            onOtherResponse,
+            onOtherResponseReturn=None):
+        self.rememberResponse(
+            (self.onOtherResponseNAME, (onOtherResponse, onOtherResponseReturn)))
 
     def rememberResponse(self, button):
         root = self.data if self.conversation is None else self.conversation
 
-        if not "buttons" in root:
+        if "buttons" not in root:
             root["buttons"] = {}
         root["buttons"][button[0]] = button
 
-
-    def rememberResponses(self, buttons, onOtherResponse=None, onOtherResponseReturn=None):
+    def rememberResponses(
+            self,
+            buttons,
+            onOtherResponse=None,
+            onOtherResponseReturn=None):
         root = self.data if self.conversation is None else self.conversation
-
-        if not "buttons" in root:
+        if "buttons" not in root:
             root["buttons"] = {}
         for button in buttons:
             root["buttons"][button[0]] = button
-
         if onOtherResponse is not None:
-            self.rememeberOnOtherResponse(onOtherResponse, onOtherResponseReturn)
-
+            self.rememeberOnOtherResponse(
+                onOtherResponse, onOtherResponseReturn)
 
     def getButton(self, key, clear=True):
         root = self.data if self.conversation is None else self.conversation
 
-        if not "buttons" in root:
+        if "buttons" not in root:
             return None
 
-        if not key in root["buttons"]:
+        if key not in root["buttons"]:
             oldkey = key
             for b in root["buttons"]:
-                if len(root["buttons"][b]) > 1 and root["buttons"][b][1] == key:
+                if len(
+                        root["buttons"][b]) > 1 and root["buttons"][b][1] == key:
                     key = b
                     break
 
@@ -646,38 +587,34 @@ class User:
 
         return ret
 
-
     def getOnOtherResponse(self):
         return self.getButton(self.onOtherResponseNAME, clear=True)
 
-
     def getResponse(self, query, clear=True):
         root = self.data if self.conversation is None else self.conversation
-
-        if not "buttons" in root:
+        if "buttons" not in root:
             return None
-
         query = query.lower()
 
         def check():
             for button in root["buttons"].values():
-                if button[0].lower() == query: #compare strings
+                if button[0].lower() == query:  # Compare strings
                     return button[1], button[0], button[0].lower()
                 if len(button) > 2:
 
                     if not isinstance(button[2], list):
-                        vagueContainers = [ button[2] ]
+                        vagueContainers = [button[2]]
                     else:
                         vagueContainers = button[2]
 
                     for vagueContainer in vagueContainers:
-                        if isinstance(vagueContainer, VagueReply.VagueContainer):
+                        if isinstance(
+                                vagueContainer,
+                                VagueReply.VagueContainer):
                             m = vagueContainer.match(query)
                             if m is not None:
                                 return button[1], vagueContainer.definitve, m
-
             return None
-
 
         ret = check()
         if ret is None:
@@ -687,6 +624,3 @@ class User:
             self.__clearResponses()
 
         return ret
-
-
-
