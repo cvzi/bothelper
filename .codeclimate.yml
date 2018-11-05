@@ -4,3 +4,10 @@ engines:
     checks:
       E501:
         enabled: false
+  bandit:
+    enabled: true
+plugins:
+ radon: 
+  enabled: true
+  sonar-python:
+    enabled: true
