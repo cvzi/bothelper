@@ -7,7 +7,7 @@ engines:
   bandit:
     enabled: true
 plugins:
- radon: 
-  enabled: true
+  radon:
+    enabled: true
   sonar-python:
     enabled: true
