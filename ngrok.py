@@ -1,4 +1,4 @@
-# This is a helper for local testing using ngrok 
+# This is a helper for local testing using ngrok
 import subprocess
 import urllib.request
 import re
@@ -16,10 +16,6 @@ def getUrl():
 def start(command="ngrok http 8080"):
     # Start ngrok
     p = subprocess.Popen(command)
-
-
-
-
 
 
 if __name__ == '__main__':
