@@ -1,8 +1,8 @@
 # bothelper
 Small library for kik, Telegram, Discord and Facebook Messenger bots
 
-Features
---------
+## Features
+
 Supported are Kik, Telegram, Discord and Facebook messenger and a chat function on a HTML site (primarily for testing).  
 The bots are running on a flask server. The Telegram bot and the Discord bot also support the message loop version without a server.  
 
@@ -28,15 +28,13 @@ Send a text message with predifined reply buttons (a.k.a "quick reply", "InlineK
 `bothelper.Bot.user(msg)`  
 Store and retrieve data specific to one user, similiar to sessions in PHP.  
 
-Examples
---------
+## Examples
 
 [https://github.com/cvzi/vicibot](https://github.com/cvzi/vicibot)  
 
 [https://github.com/cvzi/chatanonymously](https://github.com/cvzi/vicibot)  
 
-Minimal example
----------------
+## Minimal example
 
 ```python
 from bothelper import telegrambot
@@ -96,8 +94,8 @@ if __name__ == '__main__':
 
 ```
 
-Requirements
-------------
+## Requirements
+
 *   A web server that can host a flask server (e.g. [Heroku](https://www.heroku.com/) with gunicorn) (Kik, Telegram and Facebook require a public server for the webhook)
 *   [Flask](https://pypi.python.org/pypi/Flask)
 *   [emoji](https://pypi.python.org/pypi/emoji/)

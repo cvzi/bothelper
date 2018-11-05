@@ -43,11 +43,11 @@ class MyMinmalBot(bothelper.Bot):
 
 if __name__ == '__main__':
     TITLE = "Minimal Example Bot"
-    #HOSTNAME = "https://minimalbot.example.com"
+    # HOSTNAME = "https://minimalbot.example.com"
     myBot = MyMinmalBot(serv, TITLE)
     myBot.addFlaskBot(bottype=htmlbot.HtmlBot, route="/")
-    #myBot.addFlaskBot(bottype=facebookbot.FacebookBot, route="/facebook", app_secret="123", verify_token="ABC", access_token="XYZ", start_message=myBot.startMessageText)
-    #myBot.addFlaskBot(bottype=kikbot.KikBot, route="/kik", name="myminimalkikbotname", apikey="ABC", webhook_host=HOSTNAME)
-    #myBot.addFlaskBot(bottype=telegrambot.TelegramBot, route="/telegram", token="XYZ", webhook_host=HOSTNAME)
-    #myBot.addBot(bottype=discordbot.DiscordBot, token="AbC.XyZ", prefix="mybot!")
-    myBot.run(port=80) # http://127.0.0.1:80/
+    # myBot.addFlaskBot(bottype=facebookbot.FacebookBot, route="/facebook", app_secret="123", verify_token="ABC", access_token="XYZ", start_message=myBot.startMessageText)
+    # myBot.addFlaskBot(bottype=kikbot.KikBot, route="/kik", name="myminimalkikbotname", apikey="ABC", webhook_host=HOSTNAME)
+    # myBot.addFlaskBot(bottype=telegrambot.TelegramBot, route="/telegram", token="XYZ", webhook_host=HOSTNAME)
+    # myBot.addBot(bottype=discordbot.DiscordBot, token="AbC.XyZ", prefix="mybot!")
+    myBot.run(port=80)  # http://127.0.0.1:80/
