@@ -7,7 +7,7 @@ import requests
 import flask
 
 
-API_URL = "https://graph.facebook.com/v3.0/me/"
+API_URL = "https://graph.facebook.com/v4.0/me/"
 
 
 class FacebookBot:
