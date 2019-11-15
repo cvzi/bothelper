@@ -37,13 +37,15 @@ class DiscordBot:
             self.__on_message(message)
 
         @self.client.event
-        async def on_server_join(server):
-            self.__on_server_join(server)
+        async def on_guild_join(guild):
+            self.__on_guild_join(guild)
 
     def run(self):
         def worker(client, loop, token):
             asyncio.set_event_loop(loop)
-            client.start(token)
+            loop.create_task(client.start(token))
+            loop.run_forever()
+
         loop = asyncio.get_event_loop()
         t = Thread(target=worker, args=(self.client, loop, self.token))
         t.daemon = True
@@ -51,19 +53,19 @@ class DiscordBot:
 
         # self.client.run(self.token)
 
-    def __on_server_join(self, server):
+    def __on_guild_join(self, guild):
         msg = {
             "_bot": self,
-            "_userId": server.owner.id,
+            "_userId": guild.owner.id,
             "text": "/start",
-            "__server": server,
+            "__guild": guild,
             "__message": None,
-            "__on_server_join": True
+            "__on_guild_join": True
         }
         channels = []
-        for channel in server.channels:
+        for channel in guild.channels:
             if channel.type == discord.ChannelType.text and channel.permissions_for(
-                    server.me).send_messages:
+                    guild.me).send_messages:
                 if channel.name == "general":
                     channel.position = -1
                 channels.append(channel)
@@ -85,7 +87,7 @@ class DiscordBot:
                 # Is this message a reply?
                 is_reply = False
                 for sentmessage in reversed(self.sentmessages):
-                    if sentmessage.message and sentmessage.reply_to and sentmessage.message.server == message.server and sentmessage.message.channel == message.channel and sentmessage.reply_to.author == message.author:
+                    if sentmessage.message and sentmessage.reply_to and sentmessage.message.guild == message.guild and sentmessage.message.channel == message.channel and sentmessage.reply_to.author == message.author:
                         diff = message.timestamp - sentmessage.message.timestamp
                         if (sentmessage.expects_reply and diff.seconds <
                                 self.specifications["waitForExpectedReply"]) or diff.seconds < self.specifications["waitForReply"]:
@@ -132,7 +134,7 @@ class DiscordBot:
         return text
 
     async def __send_message2(self, expects_reply, reply_to, destination, *args, **kwargs):
-        m = await self.client.send_message(destination, *args, **kwargs)
+        m = await destination.send(*args, **kwargs)
         r = DiscordBot.MessageReply(m, reply_to, expects_reply)
         self.sentmessages.append(r)
         if len(self.sentmessages) > 1000:

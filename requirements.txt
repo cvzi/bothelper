@@ -1,10 +1,10 @@
 ﻿flask
-emoji>=0.5.1
+emoji >= 0.5.2
 # Facebook:
 #requests
 # Discord:
-#discord.py
+#discord.py >= 1.2.4
 # Kik:
-#kik
+#kik >= 1.5.0
 # Telegram:
-#telepot
+#telepot >= 12.7
