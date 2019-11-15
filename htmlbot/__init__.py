@@ -52,7 +52,7 @@ class HtmlBot:
         except BaseException:
             return "Corrupt json data", 400
 
-        print(str(data).encode("unicode-escape"))
+        #print(str(data).encode("unicode-escape"))
 
         # validate
         if "init" in data:
