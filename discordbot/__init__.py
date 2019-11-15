@@ -43,7 +43,7 @@ class DiscordBot:
     def run(self):
         def worker(client, loop, token):
             asyncio.set_event_loop(loop)
-            client.run(token)
+            client.start(token)
         loop = asyncio.get_event_loop()
         t = Thread(target=worker, args=(self.client, loop, self.token))
         t.daemon = True
