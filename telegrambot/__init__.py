@@ -83,7 +83,7 @@ class TelegramBot:
             "text": self.serv._demojize(query_data),
             "_orgCallbackQuery": callbackquery
         }
-        selectedButton = telepot.namedtuple.InlineKeyboardButton(text=self.serv._emojize("%s :white_heavy_check_mark:" % query_data), callback_data=TelegramBot.DISABLEDBUTTON)
+        selectedButton = telepot.namedtuple.InlineKeyboardButton(text=self.serv._emojize("%s :check_mark_button:" % query_data), callback_data=TelegramBot.DISABLEDBUTTON)
         reply_markup = telepot.namedtuple.InlineKeyboardMarkup(inline_keyboard=[[selectedButton]])
         self.telepotBot.editMessageReplyMarkup(msg_identifier=(from_id, callbackquery["message"]["message_id"]), reply_markup=reply_markup)
         self.serv._handleButtonClick(msg)

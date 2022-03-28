@@ -1,5 +1,5 @@
 ﻿flask
-emoji >= 0.5.2
+emoji >= 1.7.0
 # Facebook:
 #requests
 # Discord:
